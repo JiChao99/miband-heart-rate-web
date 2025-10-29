@@ -11,6 +11,11 @@ class MiBandHeartRateMonitor {
         this.isConnected = false;
         this.isMonitoring = false;
         
+        // Configuration constants
+        this.RECONNECT_DELAY_MS = 2000;
+        this.RECONNECT_RETRY_DELAY_MS = 5000;
+        this.heartRateHandler = null;
+        
         // UI Elements
         this.statusElement = document.getElementById('status');
         this.heartRateElement = document.getElementById('heartRateValue');
@@ -75,7 +80,7 @@ class MiBandHeartRateMonitor {
 
     setupHeartRateMonitoring() {
         // Remove any existing event listeners to prevent duplicates
-        if (this.heartRateHandler && this.characteristic) {
+        if (this.characteristic && this.heartRateHandler) {
             this.characteristic.removeEventListener('characteristicvaluechanged', this.heartRateHandler);
         }
         
@@ -123,7 +128,13 @@ class MiBandHeartRateMonitor {
                 console.log('Device disconnected');
                 this.handleDisconnection();
                 // Start auto-reconnect process
-                setTimeout(() => this.autoReconnect(), 2000);
+                setTimeout(() => {
+                    try {
+                        this.autoReconnect();
+                    } catch (error) {
+                        console.error('Auto-reconnect initiation failed:', error);
+                    }
+                }, this.RECONNECT_DELAY_MS);
             });
 
             this.updateStatus('Connecting to device...', 'scanning');
@@ -229,6 +240,7 @@ class MiBandHeartRateMonitor {
             this.heartRateHandler = null;
         }
         
+        this.device = null;
         this.server = null;
         this.service = null;
         this.characteristic = null;
@@ -256,12 +268,12 @@ class MiBandHeartRateMonitor {
                 console.error('Auto-reconnect failed:', error);
                 this.showError('Auto-reconnect failed: ' + error.message);
                 
-                // Try again after 5 seconds
+                // Try again after configured delay
                 setTimeout(() => {
                     if (!this.isConnected && this.device) {
                         this.autoReconnect();
                     }
-                }, 5000);
+                }, this.RECONNECT_RETRY_DELAY_MS);
             }
         }
     }
