@@ -29,12 +29,20 @@ class MiBandHeartRateMonitor {
     }
 
     showError(message) {
-        this.errorElement.innerHTML = `<div class="error"><strong>Error:</strong> ${message}</div>`;
+        // Use textContent to prevent XSS vulnerabilities
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error';
+        const strongElement = document.createElement('strong');
+        strongElement.textContent = 'Error: ';
+        errorDiv.appendChild(strongElement);
+        errorDiv.appendChild(document.createTextNode(message));
+        
+        this.errorElement.replaceChildren(errorDiv);
         console.error('MiBand Error:', message);
     }
 
     clearError() {
-        this.errorElement.innerHTML = '';
+        this.errorElement.replaceChildren();
     }
 
     updateHeartRate(heartRate, sensorContact = null) {
@@ -63,6 +71,21 @@ class MiBandHeartRateMonitor {
     updateButtons() {
         this.connectBtn.disabled = this.isConnected;
         this.disconnectBtn.disabled = !this.isConnected;
+    }
+
+    setupHeartRateMonitoring() {
+        // Remove any existing event listeners to prevent duplicates
+        if (this.heartRateHandler && this.characteristic) {
+            this.characteristic.removeEventListener('characteristicvaluechanged', this.heartRateHandler);
+        }
+        
+        // Create bound handler for proper cleanup
+        this.heartRateHandler = (event) => {
+            this.handleHeartRateData(event.target.value);
+        };
+        
+        // Add event listener for heart rate data
+        this.characteristic.addEventListener('characteristicvaluechanged', this.heartRateHandler);
     }
 
     async checkWebBluetoothSupport() {
@@ -99,6 +122,8 @@ class MiBandHeartRateMonitor {
             this.device.addEventListener('gattserverdisconnected', () => {
                 console.log('Device disconnected');
                 this.handleDisconnection();
+                // Start auto-reconnect process
+                setTimeout(() => this.autoReconnect(), 2000);
             });
 
             this.updateStatus('Connecting to device...', 'scanning');
@@ -127,10 +152,8 @@ class MiBandHeartRateMonitor {
             console.log('Starting notifications...');
             await this.characteristic.startNotifications();
             
-            // Add event listener for heart rate data
-            this.characteristic.addEventListener('characteristicvaluechanged', (event) => {
-                this.handleHeartRateData(event.target.value);
-            });
+            // Setup heart rate monitoring
+            this.setupHeartRateMonitoring();
 
             this.isConnected = true;
             this.isMonitoring = true;
@@ -200,7 +223,12 @@ class MiBandHeartRateMonitor {
     }
 
     handleDisconnection() {
-        this.device = null;
+        // Clean up event listeners
+        if (this.characteristic && this.heartRateHandler) {
+            this.characteristic.removeEventListener('characteristicvaluechanged', this.heartRateHandler);
+            this.heartRateHandler = null;
+        }
+        
         this.server = null;
         this.service = null;
         this.characteristic = null;
@@ -255,10 +283,8 @@ class MiBandHeartRateMonitor {
         // Start notifications
         await this.characteristic.startNotifications();
         
-        // Add event listener for heart rate data
-        this.characteristic.addEventListener('characteristicvaluechanged', (event) => {
-            this.handleHeartRateData(event.target.value);
-        });
+        // Setup heart rate monitoring
+        this.setupHeartRateMonitoring();
 
         this.isConnected = true;
         this.isMonitoring = true;
