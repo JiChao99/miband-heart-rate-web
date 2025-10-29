@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiBand Heart Rate Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .heart-rate-display {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        .heart-rate-value {
+            font-size: 4em;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin: 10px 0;
+        }
+        .heart-icon {
+            font-size: 2em;
+            color: #ff6b6b;
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .status.connected {
+            background: rgba(76, 175, 80, 0.3);
+            border-left: 4px solid #4caf50;
+        }
+        .status.disconnected {
+            background: rgba(244, 67, 54, 0.3);
+            border-left: 4px solid #f44336;
+        }
+        .status.scanning {
+            background: rgba(255, 193, 7, 0.3);
+            border-left: 4px solid #ffc107;
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 10px;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .sensor-contact {
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+        .sensor-contact.detected {
+            background: rgba(76, 175, 80, 0.3);
+        }
+        .sensor-contact.not-detected {
+            background: rgba(244, 67, 54, 0.3);
+        }
+        .error {
+            color: #ffcdd2;
+            background: rgba(244, 67, 54, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #f44336;
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .device-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .debug-panel {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .debug-header h3 {
+            margin: 0;
+            color: #ffd700;
+        }
+        .debug-clear {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+        .debug-stats {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        .debug-stats div {
+            margin: 5px 0;
+        }
+        .debug-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .debug-log h4 {
+            margin: 0 0 10px 0;
+            color: #ffd700;
+            font-size: 14px;
+        }
+        .debug-log-content {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .debug-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .debug-entry.info {
+            color: #87ceeb;
+        }
+        .debug-entry.error {
+            color: #ff6b6b;
+        }
+        .debug-entry.success {
+            color: #90ee90;
+        }
+        .debug-entry.warning {
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏃‍♂️ MiBand Heart Rate Monitor</h1>
+        
+        <div class="info">
+            <h3>📱 Web-Based MiBand Heart Rate Reader</h3>
+            <p>This web application reads heart rate data from MiBand devices using Web Bluetooth API. Make sure to enable "Heart Rate Broadcast" in your MiBand settings first.</p>
+            <p><strong>Supported devices:</strong> MiBand 4-10 (tested on MiBand 10)</p>
+            <p><strong>Requirements:</strong> Chrome/Edge browser with HTTPS connection</p>
+        </div>
+
+        <div class="heart-rate-display">
+            <div class="heart-icon">💖</div>
+            <div class="heart-rate-value" id="heartRateValue">--</div>
+            <div>BPM</div>
+            <div class="sensor-contact" id="sensorContact" style="display: none;">
+                Sensor Contact: Unknown
+            </div>
+        </div>
+
+        <div class="status disconnected" id="status">
+            <strong>Status:</strong> Not connected
+        </div>
+
+        <div class="device-info" id="deviceInfo" style="display: none;">
+            <strong>Device:</strong> <span id="deviceName">Unknown</span><br>
+            <strong>Device ID:</strong> <span id="deviceId">Unknown</span>
+        </div>
+
+        <div class="button-container">
+            <button id="connectBtn" onclick="connectToDevice()">🔗 Connect to MiBand</button>
+            <button id="disconnectBtn" onclick="disconnectDevice()" disabled>🔌 Disconnect</button>
+            <button id="debugToggle" onclick="toggleDebugMode()">🔧 Debug Mode</button>
+        </div>
+
+        <div class="debug-panel" id="debugPanel" style="display: none;">
+            <div class="debug-header">
+                <h3>🔧 Debug Information</h3>
+                <button class="debug-clear" onclick="clearDebugLog()">Clear Log</button>
+            </div>
+            <div class="debug-content">
+                <div class="debug-stats" id="debugStats">
+                    <div><strong>Connection Status:</strong> <span id="debugConnectionStatus">Disconnected</span></div>
+                    <div><strong>Device Name:</strong> <span id="debugDeviceName">None</span></div>
+                    <div><strong>Service Status:</strong> <span id="debugServiceStatus">Not connected</span></div>
+                    <div><strong>Heart Rate Updates:</strong> <span id="debugHeartRateCount">0</span></div>
+                    <div><strong>Last Update:</strong> <span id="debugLastUpdate">Never</span></div>
+                </div>
+                <div class="debug-log">
+                    <h4>Debug Log:</h4>
+                    <div class="debug-log-content" id="debugLogContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMessage"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
