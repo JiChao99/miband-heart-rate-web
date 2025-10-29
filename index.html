@@ -128,6 +128,80 @@
             border-radius: 8px;
             font-size: 14px;
         }
+        .debug-panel {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .debug-header h3 {
+            margin: 0;
+            color: #ffd700;
+        }
+        .debug-clear {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+        .debug-stats {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        .debug-stats div {
+            margin: 5px 0;
+        }
+        .debug-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .debug-log h4 {
+            margin: 0 0 10px 0;
+            color: #ffd700;
+            font-size: 14px;
+        }
+        .debug-log-content {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .debug-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .debug-entry.info {
+            color: #87ceeb;
+        }
+        .debug-entry.error {
+            color: #ff6b6b;
+        }
+        .debug-entry.success {
+            color: #90ee90;
+        }
+        .debug-entry.warning {
+            color: #ffd700;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +236,27 @@
         <div class="button-container">
             <button id="connectBtn" onclick="connectToDevice()">🔗 Connect to MiBand</button>
             <button id="disconnectBtn" onclick="disconnectDevice()" disabled>🔌 Disconnect</button>
+            <button id="debugToggle" onclick="toggleDebugMode()">🔧 Debug Mode</button>
+        </div>
+
+        <div class="debug-panel" id="debugPanel" style="display: none;">
+            <div class="debug-header">
+                <h3>🔧 Debug Information</h3>
+                <button class="debug-clear" onclick="clearDebugLog()">Clear Log</button>
+            </div>
+            <div class="debug-content">
+                <div class="debug-stats" id="debugStats">
+                    <div><strong>Connection Status:</strong> <span id="debugConnectionStatus">Disconnected</span></div>
+                    <div><strong>Device Name:</strong> <span id="debugDeviceName">None</span></div>
+                    <div><strong>Service Status:</strong> <span id="debugServiceStatus">Not connected</span></div>
+                    <div><strong>Heart Rate Updates:</strong> <span id="debugHeartRateCount">0</span></div>
+                    <div><strong>Last Update:</strong> <span id="debugLastUpdate">Never</span></div>
+                </div>
+                <div class="debug-log">
+                    <h4>Debug Log:</h4>
+                    <div class="debug-log-content" id="debugLogContent"></div>
+                </div>
+            </div>
         </div>
 
         <div id="errorMessage"></div>

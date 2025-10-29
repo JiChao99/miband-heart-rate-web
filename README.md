@@ -4,7 +4,7 @@
 
 A web-based application for reading real-time heart rate data from Xiaomi Smart Band devices using Web Bluetooth API. No installation required - just open in your browser!
 
-**Live Demo:** Open `index.html` in Chrome/Edge browser with HTTPS
+**🚀 Live Demo:** [https://jichao99.github.io/miband-heart-rate-web/](https://jichao99.github.io/miband-heart-rate-web/)
 
 ## ✨ Features
 
@@ -14,6 +14,7 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 - 🎨 **Beautiful UI** - Modern gradient design with smooth animations
 - 🔄 **Auto-reconnect** - Handles connection drops gracefully
 - 📱 **Mobile Friendly** - Works on mobile browsers too
+- 🔧 **Debug Mode** - Advanced debugging with connection logs and statistics
 
 ## 🚀 Quick Start
 
