@@ -268,12 +268,12 @@ class MiBandHeartRateMonitor {
             
             this.debugLog('Heart Rate Measurement characteristic obtained', 'success');
             
+            // Setup heart rate monitoring BEFORE starting notifications
+            this.setupHeartRateMonitoring();
+            
             // Start notifications
             this.debugLog('Starting notifications...', 'info');
             await this.characteristic.startNotifications();
-            
-            // Setup heart rate monitoring
-            this.setupHeartRateMonitoring();
 
             this.isConnected = true;
             this.isMonitoring = true;
@@ -292,6 +292,12 @@ class MiBandHeartRateMonitor {
 
     handleHeartRateData(dataView) {
         try {
+            // Validate that we have data
+            if (!dataView || dataView.byteLength === 0) {
+                this.debugLog('Received empty heart rate data', 'warning');
+                return;
+            }
+            
             // Parse heart rate data (same logic as Rust implementation)
             const flags = dataView.getUint8(0);
             
@@ -299,9 +305,17 @@ class MiBandHeartRateMonitor {
             let heartRateValue;
             if (flags & 0x01) {
                 // 16-bit heart rate value
+                if (dataView.byteLength < 3) {
+                    this.debugLog('Insufficient data for 16-bit heart rate value', 'error');
+                    return;
+                }
                 heartRateValue = dataView.getUint16(1, true); // little endian
             } else {
                 // 8-bit heart rate value
+                if (dataView.byteLength < 2) {
+                    this.debugLog('Insufficient data for 8-bit heart rate value', 'error');
+                    return;
+                }
                 heartRateValue = dataView.getUint8(1);
             }
 
@@ -314,6 +328,12 @@ class MiBandHeartRateMonitor {
 
             // Data parsing details for debug
             this.debugLog(`Raw data: flags=0x${flags.toString(16)}, HR=${heartRateValue}, SC=${sensorContact}`, 'info');
+            
+            // Validate heart rate value
+            if (heartRateValue === 0) {
+                this.debugLog('Received heart rate value of 0 (device may be initializing)', 'warning');
+            }
+            
             this.updateHeartRate(heartRateValue, sensorContact);
             
         } catch (error) {
@@ -403,11 +423,11 @@ class MiBandHeartRateMonitor {
         // Get Heart Rate Measurement Characteristic
         this.characteristic = await this.service.getCharacteristic(HRM_UUID);
         
+        // Setup heart rate monitoring BEFORE starting notifications
+        this.setupHeartRateMonitoring();
+        
         // Start notifications
         await this.characteristic.startNotifications();
-        
-        // Setup heart rate monitoring
-        this.setupHeartRateMonitoring();
 
         this.isConnected = true;
         this.isMonitoring = true;
