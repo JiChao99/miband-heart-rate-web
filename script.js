@@ -246,16 +246,13 @@ class MiBandHeartRateMonitor {
             
             let requestOptions;
             if (this.isMobileDevice()) {
-                // Mobile-friendly device request with broader filters
+                // Mobile-friendly device request - MUST require heart rate service for access permissions
                 requestOptions = {
-                    filters: [
-                        { services: [HRS_UUID] },
-                        { namePrefix: 'Mi Smart Band' },
-                        { namePrefix: 'Xiaomi Smart Band' },
-                        { namePrefix: 'Mi Band' }
-                    ],
+                    filters: [{
+                        services: [HRS_UUID],
+                        namePrefix: 'Xiaomi Smart Band'  // Combine service requirement with name filter
+                    }],
                     optionalServices: [
-                        HRS_UUID, 
                         'battery_service', 
                         'device_information',
                         '0000fee0-0000-1000-8000-00805f9b34fb', // Mi Band Service 1
@@ -264,6 +261,7 @@ class MiBandHeartRateMonitor {
                     ]
                 };
                 this.debugLog('Mobile device detected - applying mobile-specific configurations', 'info');
+                this.debugLog('Using combined service+name filter to ensure service access permissions', 'info');
                 this.debugLog(`Mobile filters: ${JSON.stringify(requestOptions.filters)}`, 'info');
                 this.debugLog(`Optional services: ${JSON.stringify(requestOptions.optionalServices)}`, 'info');
             } else {
