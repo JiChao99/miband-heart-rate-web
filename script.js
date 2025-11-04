@@ -45,18 +45,24 @@ class MiBandHeartRateMonitor {
 
         // Picture-in-Picture Elements
         this.pipVideo = document.getElementById('pipVideo');
-        this.pipDisplay = document.getElementById('pipDisplay');
-        this.pipDisplayIcon = document.getElementById('pipDisplayIcon');
-        this.pipDisplayHeartRate = document.getElementById('pipDisplayHeartRate');
         
         // PiP state
         this.isPipActive = false;
+        this.shouldRenderPip = false;
         this.showHeartIcon = true;
+        this.pipCanvas = null;
+        this.pipContext = null;
+        this.pipRenderLoop = null;
         this.pipStream = null;
+        this.pipScale = window.devicePixelRatio || 1;
+        this.pipDimensions = { width: 320, height: 240 };
         
         // PiP Settings UI Elements
         this.pipSettingsPanel = document.getElementById('pipSettingsPanel');
         this.pipShowIconSetting = document.getElementById('pipShowIconSetting');
+        if (this.pipShowIconSetting) {
+            this.showHeartIcon = this.pipShowIconSetting.checked;
+        }
         
         // Initialize PiP functionality
         this.initializePip();
@@ -175,131 +181,227 @@ class MiBandHeartRateMonitor {
         this.debugLog('Debug log cleared', 'warning');
     }
 
-    // 全新的简单PiP实现 - 直接使用Canvas，不需要SVG转换
+    // Simplified PiP renderer powered by a high-resolution canvas
     async startSimplePipStream() {
-        // 创建固定尺寸的Canvas
+        if (!this.pipVideo) {
+            throw new Error('PiP video element not available');
+        }
+
+        // Ensure we start from a clean state
+        this.stopPipStream();
+
+        const { width, height } = this.pipDimensions;
+        const dpr = window.devicePixelRatio || 1;
+
         const canvas = document.createElement('canvas');
-        canvas.width = 200;
-        canvas.height = 150;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+
         const ctx = canvas.getContext('2d');
-        
-        // 配置高质量渲染
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        
-        // 创建流
+        if (!ctx) {
+            throw new Error('Unable to create PiP canvas context');
+        }
+
+        this.pipCanvas = canvas;
+        this.pipContext = ctx;
+        this.pipScale = dpr;
+        this.shouldRenderPip = true;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
         const stream = canvas.captureStream(30);
-        
-        // 存储渲染循环引用，方便停止
-        this.pipRenderLoop = null;
-        
-        // 开始持续渲染循环
+        this.pipStream = stream;
+
+        this.pipVideo.muted = true;
+        this.pipVideo.playsInline = true;
+        this.pipVideo.srcObject = stream;
+
         const renderFrame = () => {
-            // 只要PiP窗口存在就继续渲染
-            if (!document.pictureInPictureElement) {
+            if (!this.shouldRenderPip) {
                 this.pipRenderLoop = null;
                 return;
             }
-            
-            // 清除画布
-            ctx.clearRect(0, 0, 200, 150);
-            
-            // 渐变背景
-            const gradient = ctx.createLinearGradient(0, 0, 200, 150);
-            gradient.addColorStop(0, '#667eea');
-            gradient.addColorStop(1, '#764ba2');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 200, 150);
-            
-            // 心率图标
-            if (this.showHeartIcon) {
-                ctx.font = '28px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.fillText('❤️', 100, 60);
-            }
-            
-            // 心率数值 - 直接从DOM元素获取最新值
-            ctx.font = 'bold 32px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillStyle = 'white';
-            ctx.shadowColor = 'rgba(0,0,0,0.5)';
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 2;
-            ctx.shadowBlur = 4;
-            
-            // 直接从页面获取最新心率
-            let heartRate = '--';
-            if (this.heartRateElement && this.heartRateElement.textContent) {
-                heartRate = this.heartRateElement.textContent;
-            }
-            
-            const yPos = this.showHeartIcon ? 100 : 80;
-            ctx.fillText(heartRate, 100, yPos);
-            
-            // BPM标签
-            ctx.font = '12px Arial';
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.shadowColor = 'transparent';
-            ctx.fillText('BPM', 100, yPos + 25);
-            
-            // 继续下一帧 - 这里是关键，必须持续调用
+
+            this.drawPipFrame();
             this.pipRenderLoop = requestAnimationFrame(renderFrame);
         };
-        
-        // 确保video元素准备就绪
-        this.pipVideo.srcObject = stream;
-        
-        // 等待视频元数据加载
-        await new Promise((resolve, reject) => {
-            this.pipVideo.addEventListener('loadedmetadata', resolve, { once: true });
-            this.pipVideo.addEventListener('error', reject, { once: true });
-            
-            // 添加超时保护
-            setTimeout(() => resolve(), 1000);
-        });
-        
-        // 开始播放视频
+
+        renderFrame();
+
+        await this.ensureVideoReady(this.pipVideo);
+
         try {
             await this.pipVideo.play();
             this.debugLog('PiP video playing successfully', 'success');
         } catch (playError) {
-            this.debugLog(`Video play error: ${playError.message}`, 'warning');
-            // 即使播放失败也继续，因为流可能已经在工作
+            this.debugLog(`Video play warning: ${playError.message}`, 'warning');
         }
-        
-        // 开始渲染循环
-        this.debugLog('Starting PiP render loop', 'info');
-        renderFrame();
     }
-    
+
     stopPipStream() {
-        // 停止渲染循环
+        this.shouldRenderPip = false;
+
         if (this.pipRenderLoop) {
             cancelAnimationFrame(this.pipRenderLoop);
             this.pipRenderLoop = null;
         }
-        
-        // 停止视频流
-        if (this.pipVideo && this.pipVideo.srcObject) {
-            const tracks = this.pipVideo.srcObject.getTracks();
-            tracks.forEach(track => track.stop());
+
+        if (this.pipStream) {
+            this.pipStream.getTracks().forEach(track => track.stop());
+            this.pipStream = null;
+        }
+
+        if (this.pipVideo) {
+            try {
+                this.pipVideo.pause();
+            } catch (e) {
+                // Ignore pause errors on already stopped video
+            }
             this.pipVideo.srcObject = null;
         }
-        
+
+        this.pipCanvas = null;
+        this.pipContext = null;
+
         this.debugLog('PiP stream stopped', 'info');
     }
 
+    async ensureVideoReady(video, timeout = 1500) {
+        if (!video) {
+            throw new Error('PiP video element not available');
+        }
+
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            return;
+        }
+
+        try {
+            await new Promise((resolve, reject) => {
+            let done = false;
+            let pollId = null;
+            let timeoutId = null;
+
+            const finish = () => {
+                if (done) {
+                    return;
+                }
+                done = true;
+                clearInterval(pollId);
+                clearTimeout(timeoutId);
+                video.removeEventListener('loadedmetadata', finish);
+                video.removeEventListener('loadeddata', finish);
+                video.removeEventListener('error', fail);
+                resolve();
+            };
+
+            const fail = (event) => {
+                if (done) {
+                    return;
+                }
+                done = true;
+                clearInterval(pollId);
+                clearTimeout(timeoutId);
+                video.removeEventListener('loadedmetadata', finish);
+                video.removeEventListener('loadeddata', finish);
+                video.removeEventListener('error', fail);
+                reject(event?.error || new Error('PiP video error'));
+            };
+
+            video.addEventListener('loadedmetadata', finish, { once: true });
+            video.addEventListener('loadeddata', finish, { once: true });
+            video.addEventListener('error', fail, { once: true });
+
+            pollId = setInterval(() => {
+                if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                    finish();
+                }
+            }, 50);
+
+            if (typeof video.requestVideoFrameCallback === 'function') {
+                video.requestVideoFrameCallback(() => finish());
+            }
+
+            timeoutId = setTimeout(finish, timeout);
+            });
+        } catch (error) {
+            this.debugLog(`PiP readiness error: ${error.message}`, 'error');
+            throw error;
+        }
+
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            this.debugLog('PiP readiness timed out; continuing with last rendered frame', 'warning');
+        }
+    }
+
+    drawPipFrame() {
+        if (!this.pipContext || !this.pipCanvas) {
+            return;
+        }
+
+        const ctx = this.pipContext;
+        const { width, height } = this.pipDimensions;
+        const dpr = this.pipScale || window.devicePixelRatio || 1;
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, '#4c6ef5');
+        gradient.addColorStop(1, '#7b2cbf');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        if (this.showHeartIcon) {
+            this.drawHeartShape(ctx, width / 2, height / 2 - 55, 64);
+        }
+
+        const heartRate = this.heartRateElement?.textContent?.trim() || '--';
+        const rateY = this.showHeartIcon ? height / 2 + 10 : height / 2;
+
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '600 72px "Segoe UI", Arial, sans-serif';
+        ctx.fillText(heartRate, width / 2, rateY);
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = '500 24px "Segoe UI", Arial, sans-serif';
+        ctx.fillText('BPM', width / 2, rateY + 38);
+    }
+
+    drawHeartShape(ctx, x, y, size) {
+        const time = performance.now() / 1000;
+        const pulse = 1 + 0.08 * Math.sin(time * 2.4);
+        const scale = size / 100;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale * pulse, scale * pulse);
+
+        ctx.beginPath();
+        ctx.moveTo(0, -30);
+        ctx.bezierCurveTo(0, -70, -60, -70, -60, -20);
+        ctx.bezierCurveTo(-60, 30, 0, 70, 0, 110);
+        ctx.bezierCurveTo(0, 70, 60, 30, 60, -20);
+        ctx.bezierCurveTo(60, -70, 0, -70, 0, -30);
+        ctx.closePath();
+
+        ctx.fillStyle = '#ff6b6b';
+        ctx.shadowColor = 'rgba(0,0,0,0.25)';
+        ctx.shadowBlur = 18;
+        ctx.fill();
+
+        ctx.restore();
+    }
+
     updateHeartRate(heartRate, sensorContact = null) {
-        this.heartRateElement.textContent = heartRate;
-        this.currentHeartRate = heartRate; // 存储当前心率给PiP使用
+    this.heartRateElement.textContent = heartRate;
         this.heartRateUpdateCount++;
         this.lastUpdateTime = new Date().toLocaleTimeString();
-        
-        // Update PiP display if active
-        if (this.isPipActive && this.pipHeartRate) {
-            this.pipHeartRate.textContent = heartRate;
-        }
         
         if (sensorContact !== null) {
             this.sensorContactElement.style.display = 'block';
@@ -539,6 +641,7 @@ class MiBandHeartRateMonitor {
         this.sensorContactElement.style.display = 'none';
         this.deviceInfoElement.style.display = 'none';
         this.updateButtons();
+        this.stopPipStream();
         
         // Close PiP if active
         if (this.isPipActive && document.pictureInPictureElement) {
@@ -600,29 +703,25 @@ class MiBandHeartRateMonitor {
 
     // Picture-in-Picture functionality using standard API
     initializePip() {
-        if (!this.pipVideo || !this.pipDisplay) {
-            this.debugLog('PiP elements not found', 'error');
+        if (!this.pipVideo) {
+            this.debugLog('PiP video element not found', 'error');
             return;
         }
 
-        this.debugLog('PiP initialized successfully', 'success');
-
-        // Handle PiP events
         this.pipVideo.addEventListener('enterpictureinpicture', () => {
             this.isPipActive = true;
-            this.startPipRendering();
             this.debugLog('Entered Picture-in-Picture mode', 'success');
         });
 
         this.pipVideo.addEventListener('leavepictureinpicture', () => {
             this.isPipActive = false;
-            this.stopPipRendering();
+            this.stopPipStream();
             this.debugLog('Left Picture-in-Picture mode', 'info');
         });
 
-        // Handle video errors
-        this.pipVideo.addEventListener('error', (e) => {
-            this.debugLog(`PiP video error: ${e.message}`, 'error');
+        this.pipVideo.addEventListener('error', (event) => {
+            const message = event?.message || event?.error?.message || 'Unknown PiP video error';
+            this.debugLog(`PiP video error: ${message}`, 'error');
         });
 
         this.debugLog('PiP initialized successfully', 'success');
@@ -630,7 +729,7 @@ class MiBandHeartRateMonitor {
 
     async togglePictureInPicture() {
         this.debugLog('togglePictureInPicture called', 'info');
-        
+
         if (!this.isConnected && !this.debugMode) {
             this.showError('Please connect to a device first (or enable debug mode to test)');
             this.debugLog('PiP blocked: device not connected and debug mode disabled', 'warning');
@@ -646,276 +745,44 @@ class MiBandHeartRateMonitor {
                 this.debugLog('Exiting PiP mode', 'info');
                 await document.exitPictureInPicture();
                 this.stopPipStream();
-            } else {
-                this.debugLog('Entering PiP mode', 'info');
-                
-                try {
-                    // 使用简化的流媒体方案
-                    await this.startSimplePipStream();
-                    
-                    // 小延迟确保视频流准备好
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    await this.pipVideo.requestPictureInPicture();
-                    this.debugLog('PiP activated successfully', 'success');
-                } catch (pipError) {
-                    this.debugLog(`PiP setup error: ${pipError.message}`, 'error');
-                    this.stopPipStream(); // 清理资源
-                    throw pipError;
-                }
+                return;
             }
+
+            this.debugLog('Entering PiP mode', 'info');
+            await this.startSimplePipStream();
+
+            // Ensure at least one frame has rendered before requesting PiP
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            await this.pipVideo.requestPictureInPicture();
+            this.debugLog('PiP activated successfully', 'success');
         } catch (error) {
+            this.stopPipStream();
             this.debugLog(`PiP error: ${error.message}`, 'error');
             this.showError(`Picture-in-Picture failed: ${error.message}`);
         }
     }
 
-    startPipRendering() {
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-        }
-
-        const render = () => {
-            if (!this.isPipActive) return;
-
-            this.renderPipFrame();
-            this.animationFrameId = requestAnimationFrame(render);
-        };
-
-        render();
-    }
-
-    stopPipRendering() {
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-    }
-
-    renderPipFrame() {
-        const ctx = this.pipContext;
-        const canvas = this.pipCanvas;
-        
-        // Get size info
-        const sizes = {
-            small: { width: 160, height: 120 },
-            medium: { width: 200, height: 150 },
-            large: { width: 240, height: 180 }
-        };
-        const size = sizes[this.pipSize] || sizes.small;
-        
-        // Clear canvas with actual pixel dimensions
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Create and render SVG
-        const svgContent = this.createPipSVG(size);
-        this.renderSVGToCanvas(svgContent, ctx, size);
-    }
-
-    createPipSVG(size) {
-        const heartRate = this.heartRateElement ? this.heartRateElement.textContent : '--';
-        const centerX = size.width / 2;
-        const centerY = size.height / 2;
-        
-        // Scale fonts based on size
-        const fontScale = size.width / 160;
-        
-        // Animate heart
-        const time = Date.now() / 1000;
-        const heartScale = 1 + 0.1 * Math.sin(time * 2);
-        
-        // Heart icon SVG path (optimized for small sizes)
-        const heartPath = `M50 15C50 15 40 5 25 15C10 5 0 15 0 15C0 15 0 25 25 50C50 25 50 15 50 15Z`;
-        
-        const yOffset = this.showHeartIcon ? 12 * fontScale : 0;
-        
-        return `
-            <svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#667eea"/>
-                        <stop offset="100%" style="stop-color:#764ba2"/>
-                    </linearGradient>
-                    <filter id="textShadow">
-                        <feDropShadow dx="1" dy="1" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/>
-                    </filter>
-                </defs>
-                
-                <!-- Background -->
-                <rect width="100%" height="100%" fill="url(#bgGradient)" rx="8"/>
-                
-                ${this.showHeartIcon ? `
-                <!-- Heart Icon -->
-                <g transform="translate(${centerX}, ${centerY - 18 * fontScale}) scale(${heartScale * fontScale * 0.5})">
-                    <path d="${heartPath}" fill="#ff6b6b" transform="translate(-25, -25)"/>
-                </g>
-                ` : ''}
-                
-                <!-- Heart Rate Value -->
-                <text x="${centerX}" y="${centerY + yOffset}" 
-                      text-anchor="middle" 
-                      dominant-baseline="middle"
-                      font-family="Arial, sans-serif" 
-                      font-size="${Math.round(32 * fontScale)}px" 
-                      font-weight="bold" 
-                      fill="#ff6b6b"
-                      filter="url(#textShadow)">${heartRate}</text>
-                
-                <!-- BPM Label -->
-                <text x="${centerX}" y="${centerY + yOffset + 22 * fontScale}" 
-                      text-anchor="middle" 
-                      dominant-baseline="middle"
-                      font-family="Arial, sans-serif" 
-                      font-size="${Math.round(11 * fontScale)}px" 
-                      fill="#cccccc">BPM</text>
-            </svg>
-        `;
-    }
-
-    renderSVGToCanvas(svgContent, ctx, size) {
-        const img = new Image();
-        const svg = new Blob([svgContent], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(svg);
-        
-        img.onload = () => {
-            // Use smooth scaling for crisp rendering
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            
-            // Calculate scale for high DPI
-            const dpr = window.devicePixelRatio || 1;
-            ctx.drawImage(img, 0, 0, size.width * dpr, size.height * dpr);
-            
-            URL.revokeObjectURL(url);
-        };
-        
-        img.onerror = () => {
-            // Fallback to canvas rendering if SVG fails
-            this.debugLog('SVG rendering failed, using canvas fallback', 'warning');
-            this.renderPipFrameCanvas(ctx, size);
-            URL.revokeObjectURL(url);
-        };
-        
-        img.src = url;
-    }
-
-    renderPipFrameCanvas(ctx, size) {
-        const heartRate = this.heartRateElement ? this.heartRateElement.textContent : '--';
-        const centerX = size.width / 2;
-        const centerY = size.height / 2;
-        const fontScale = size.width / 160;
-        const dpr = window.devicePixelRatio || 1;
-        
-        // Clear and draw background gradient
-        ctx.clearRect(0, 0, size.width * dpr, size.height * dpr);
-        const gradient = ctx.createLinearGradient(0, 0, size.width * dpr, size.height * dpr);
-        gradient.addColorStop(0, '#667eea');
-        gradient.addColorStop(1, '#764ba2');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, size.width * dpr, size.height * dpr);
-        
-        // Set up high quality text rendering
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Draw heart icon if enabled
-        if (this.showHeartIcon) {
-            const time = Date.now() / 1000;
-            const scale = 1 + 0.1 * Math.sin(time * 2);
-            
-            ctx.save();
-            ctx.translate(centerX * dpr, (centerY - 18 * fontScale) * dpr);
-            ctx.scale(scale * dpr, scale * dpr);
-            ctx.font = `${Math.round(28 * fontScale)}px Arial`;
-            ctx.fillStyle = '#ff6b6b';
-            ctx.fillText('💖', 0, 0);
-            ctx.restore();
-        }
-        
-        // Draw heart rate value
-        const yOffset = this.showHeartIcon ? 12 * fontScale : 0;
-        ctx.font = `bold ${Math.round(32 * fontScale * dpr)}px Arial`;
-        ctx.fillStyle = '#ff6b6b';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-        ctx.shadowBlur = 3 * fontScale * dpr;
-        ctx.shadowOffsetX = 1 * fontScale * dpr;
-        ctx.shadowOffsetY = 1 * fontScale * dpr;
-        ctx.fillText(heartRate, centerX * dpr, (centerY + yOffset) * dpr);
-        
-        // Draw BPM label
-        ctx.shadowColor = 'transparent';
-        ctx.font = `${Math.round(11 * fontScale * dpr)}px Arial`;
-        ctx.fillStyle = '#cccccc';
-        ctx.fillText('BPM', centerX * dpr, (centerY + yOffset + 22 * fontScale) * dpr);
-    }
-
     togglePipHeartIcon() {
         this.showHeartIcon = !this.showHeartIcon;
         this.debugLog(`PiP heart icon: ${this.showHeartIcon ? 'shown' : 'hidden'}`, 'info');
-    }
 
-    updatePipCanvasSize() {
-        if (!this.pipCanvas || !this.pipVideo) return;
-
-        // Define size presets
-        const sizes = {
-            small: { width: 160, height: 120 },
-            medium: { width: 200, height: 150 },
-            large: { width: 240, height: 180 }
-        };
-
-        const size = sizes[this.pipSize] || sizes.small;
-        
-        // Set high DPI for sharp rendering
-        const dpr = window.devicePixelRatio || 1;
-        this.pipCanvas.width = size.width * dpr;
-        this.pipCanvas.height = size.height * dpr;
-        this.pipCanvas.style.width = `${size.width}px`;
-        this.pipCanvas.style.height = `${size.height}px`;
-        
-        // Update video size too
-        this.pipVideo.style.width = `${size.width}px`;
-        this.pipVideo.style.height = `${size.height}px`;
-        
-        // Reset and configure context for high quality rendering
-        this.pipContext.resetTransform();
-        this.pipContext.imageSmoothingEnabled = true;
-        this.pipContext.imageSmoothingQuality = 'high';
-        
-        // Re-render initial frame
-        this.renderPipFrame();
-        
-        // Update video stream
-        this.setupVideoStream();
-
-        this.debugLog(`PiP canvas resized to ${size.width}x${size.height} (${this.pipSize}) at ${dpr}x DPI`, 'info');
-    }
-
-    setupVideoStream() {
-        if (!this.pipCanvas || !this.pipVideo) return;
-        
-        const stream = this.pipCanvas.captureStream(30); // 30 FPS
-        this.pipVideo.srcObject = stream;
-        
-        // Set video properties
-        this.pipVideo.muted = true;
-        this.pipVideo.playsInline = true;
-        this.pipVideo.loop = true;
-    }
-
-    updatePipSettings() {
-        // Update heart icon setting
-        if (this.pipShowIconSetting) {
-            this.showHeartIcon = this.pipShowIconSetting.checked;
+        if (this.pipContext) {
+            this.drawPipFrame();
         }
-        
-        // Update size setting
-        if (this.pipSizeSetting) {
-            this.pipSize = this.pipSizeSetting.value;
-            this.updatePipCanvasSize();
+    }
+
+    updatePipIconPreference() {
+        if (!this.pipShowIconSetting) {
+            return;
         }
-        
-        this.debugLog(`PiP settings updated: Icon=${this.showHeartIcon}, Size=${this.pipSize}`, 'info');
+
+        this.showHeartIcon = this.pipShowIconSetting.checked;
+        this.debugLog(`PiP heart icon preference updated: ${this.showHeartIcon ? 'shown' : 'hidden'}`, 'info');
+
+        if (this.pipContext) {
+            this.drawPipFrame();
+        }
     }
 }
 
@@ -950,10 +817,10 @@ function togglePipHeartIcon() {
 
 // PiP Settings functions
 function updatePipIconSetting() {
-    monitor.updatePipSettings();
+    monitor.updatePipIconPreference();
 }
 
-// updatePipSizeSetting 已被移除 - 使用固定尺寸
+// updatePipSizeSetting removed - fixed dimensions stay in use
 
 // Debug function to test PiP without device connection
 function testPictureInPicture() {
