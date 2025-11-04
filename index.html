@@ -251,8 +251,8 @@
             position: absolute;
             top: -9999px;
             left: -9999px;
-            width: 320px;
-            height: 240px;
+            width: 160px;
+            height: 120px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
@@ -362,6 +362,17 @@
             <button id="debugToggle" onclick="toggleDebugMode()">🔧 Debug Mode</button>
         </div>
 
+        <!-- PiP Settings Panel -->
+        <div class="info" id="pipSettingsPanel" style="display: none;">
+            <h3>📺 Picture-in-Picture Settings</h3>
+            <div style="margin: 15px 0;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="pipShowIconSetting" checked onchange="updatePipIconSetting()" style="margin-right: 10px; transform: scale(1.2);">
+                    <span>Show heart icon in PiP window</span>
+                </label>
+            </div>
+        </div>
+
         <div class="debug-panel" id="debugPanel" style="display: none;">
             <div class="debug-header">
                 <h3>🔧 Debug Information</h3>
@@ -385,11 +396,50 @@
         <div id="errorMessage"></div>
     </div>
 
-    <!-- Picture-in-Picture Video Element (hidden) -->
-    <video id="pipVideo" muted playsinline autoplay></video>
-    
-    <!-- Canvas for rendering PiP content (hidden) -->
-    <canvas id="pipCanvas" style="position: absolute; top: -9999px; left: -9999px; width: 320px; height: 240px;"></canvas>
+    <!-- PiP Content Display -->
+    <div id="pipDisplay" style="
+        position: fixed;
+        top: -200px;
+        left: -200px;
+        width: 200px;
+        height: 150px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        color: white;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        z-index: 9999;
+    ">
+        <div id="pipDisplayIcon" style="
+            font-size: 32px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        ">❤️</div>
+        <div id="pipDisplayHeartRate" style="
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ">--</div>
+        <div style="
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 4px;
+        ">BPM</div>
+    </div>
+
+    <!-- Picture-in-Picture Video Element -->
+    <video id="pipVideo" muted playsinline autoplay style="
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        width: 200px;
+        height: 150px;
+    "></video>
 
     <script src="script.js"></script>
 </body>
