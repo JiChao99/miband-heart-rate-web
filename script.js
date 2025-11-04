@@ -254,9 +254,18 @@ class MiBandHeartRateMonitor {
                         { namePrefix: 'Xiaomi Smart Band' },
                         { namePrefix: 'Mi Band' }
                     ],
-                    optionalServices: [HRS_UUID, 'battery_service', 'device_information']
+                    optionalServices: [
+                        HRS_UUID, 
+                        'battery_service', 
+                        'device_information',
+                        '0000fee0-0000-1000-8000-00805f9b34fb', // Mi Band Service 1
+                        '0000fee1-0000-1000-8000-00805f9b34fb', // Mi Band Service 2
+                        '00001530-0000-3512-2118-0009af100700'  // Mi Band Custom Service
+                    ]
                 };
-                this.debugLog('Using mobile-optimized device filters', 'info');
+                this.debugLog('Mobile device detected - applying mobile-specific configurations', 'info');
+                this.debugLog(`Mobile filters: ${JSON.stringify(requestOptions.filters)}`, 'info');
+                this.debugLog(`Optional services: ${JSON.stringify(requestOptions.optionalServices)}`, 'info');
             } else {
                 // Desktop version
                 requestOptions = {
@@ -265,6 +274,7 @@ class MiBandHeartRateMonitor {
                     }],
                     optionalServices: []
                 };
+                this.debugLog('Desktop device detected - using standard filters', 'info');
             }
             
             this.device = await navigator.bluetooth.requestDevice(requestOptions);
@@ -295,18 +305,132 @@ class MiBandHeartRateMonitor {
             this.debugLog('Connected to GATT server', 'success');
             this.updateStatus('Discovering services...', 'scanning');
 
+            // First, discover all available services for debugging
+            this.debugLog('Discovering all available services...', 'info');
+            try {
+                const allServices = await this.server.getPrimaryServices();
+                this.debugLog(`Found ${allServices.length} services:`, 'info');
+                for (const service of allServices) {
+                    this.debugLog(`  - Service UUID: ${service.uuid}`, 'info');
+                }
+                
+                // Also try to get common Mi Band services
+                const commonMiBandServices = [
+                    '0000fee0-0000-1000-8000-00805f9b34fb', // Mi Band Service 1
+                    '0000fee1-0000-1000-8000-00805f9b34fb', // Mi Band Service 2
+                    '0000180a-0000-1000-8000-00805f9b34fb', // Device Information Service
+                    '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
+                    '00001530-0000-3512-2118-0009af100700', // Mi Band Custom Service
+                    '00001800-0000-1000-8000-00805f9b34fb', // Generic Access Service
+                    '00001801-0000-1000-8000-00805f9b34fb'  // Generic Attribute Service
+                ];
+                
+                this.debugLog('Testing common Mi Band service UUIDs...', 'info');
+                for (const serviceUuid of commonMiBandServices) {
+                    try {
+                        const testService = await this.server.getPrimaryService(serviceUuid);
+                        this.debugLog(`  ✓ Found service: ${serviceUuid}`, 'success');
+                        
+                        // Get characteristics for this service
+                        try {
+                            const characteristics = await testService.getCharacteristics();
+                            this.debugLog(`    - Has ${characteristics.length} characteristics:`, 'info');
+                            for (const char of characteristics) {
+                                this.debugLog(`      * Characteristic: ${char.uuid}`, 'info');
+                            }
+                        } catch (charError) {
+                            this.debugLog(`    - Could not get characteristics: ${charError.message}`, 'warning');
+                        }
+                    } catch (serviceError) {
+                        this.debugLog(`  ✗ Service not found: ${serviceUuid}`, 'info');
+                    }
+                }
+            } catch (discoveryError) {
+                this.debugLog(`Service discovery error: ${discoveryError.message}`, 'warning');
+            }
+
             // Get Heart Rate Service
             this.debugLog('Getting Heart Rate Service...', 'info');
-            this.service = await this.server.getPrimaryService(HRS_UUID);
+            try {
+                this.service = await this.server.getPrimaryService(HRS_UUID);
+                this.debugLog('Heart Rate Service obtained', 'success');
+            } catch (hrsError) {
+                this.debugLog(`Standard Heart Rate Service (${HRS_UUID}) not found: ${hrsError.message}`, 'error');
+                
+                // Try alternative Mi Band heart rate service UUIDs
+                const alternativeHRServices = [
+                    '0000fee0-0000-1000-8000-00805f9b34fb',
+                    '0000fee1-0000-1000-8000-00805f9b34fb',
+                    '00001530-0000-3512-2118-0009af100700'
+                ];
+                
+                let serviceFound = false;
+                for (const altServiceUuid of alternativeHRServices) {
+                    try {
+                        this.debugLog(`Trying alternative service: ${altServiceUuid}`, 'info');
+                        this.service = await this.server.getPrimaryService(altServiceUuid);
+                        this.debugLog(`Alternative service found: ${altServiceUuid}`, 'success');
+                        serviceFound = true;
+                        break;
+                    } catch (altError) {
+                        this.debugLog(`Alternative service ${altServiceUuid} not found`, 'info');
+                    }
+                }
+                
+                if (!serviceFound) {
+                    throw new Error('No heart rate service found (tried standard and Mi Band specific UUIDs)');
+                }
+            }
             
-            this.debugLog('Heart Rate Service obtained', 'success');
             this.updateStatus('Getting characteristics...', 'scanning');
+
+            // Get all characteristics from the service first for debugging
+            this.debugLog('Getting all characteristics from the heart rate service...', 'info');
+            try {
+                const allCharacteristics = await this.service.getCharacteristics();
+                this.debugLog(`Found ${allCharacteristics.length} characteristics in heart rate service:`, 'info');
+                for (const char of allCharacteristics) {
+                    this.debugLog(`  - Characteristic UUID: ${char.uuid}`, 'info');
+                    this.debugLog(`    Properties: ${JSON.stringify(char.properties)}`, 'info');
+                }
+            } catch (charDiscoveryError) {
+                this.debugLog(`Characteristic discovery error: ${charDiscoveryError.message}`, 'warning');
+            }
 
             // Get Heart Rate Measurement Characteristic
             this.debugLog('Getting Heart Rate Measurement characteristic...', 'info');
-            this.characteristic = await this.service.getCharacteristic(HRM_UUID);
-            
-            this.debugLog('Heart Rate Measurement characteristic obtained', 'success');
+            try {
+                this.characteristic = await this.service.getCharacteristic(HRM_UUID);
+                this.debugLog('Heart Rate Measurement characteristic obtained', 'success');
+            } catch (hrmError) {
+                this.debugLog(`Standard Heart Rate Characteristic (${HRM_UUID}) not found: ${hrmError.message}`, 'error');
+                
+                // Try alternative Mi Band heart rate characteristic UUIDs
+                const alternativeHRCharacteristics = [
+                    '00002a37-0000-1000-8000-00805f9b34fb', // Standard HR measurement (full UUID)
+                    '0000ff05-0000-1000-8000-00805f9b34fb', // Mi Band custom characteristic
+                    '0000ff06-0000-1000-8000-00805f9b34fb', // Mi Band custom characteristic
+                    '00000006-0000-3512-2118-0009af100700', // Mi Band specific
+                    '00000007-0000-3512-2118-0009af100700'  // Mi Band specific
+                ];
+                
+                let characteristicFound = false;
+                for (const altCharUuid of alternativeHRCharacteristics) {
+                    try {
+                        this.debugLog(`Trying alternative characteristic: ${altCharUuid}`, 'info');
+                        this.characteristic = await this.service.getCharacteristic(altCharUuid);
+                        this.debugLog(`Alternative characteristic found: ${altCharUuid}`, 'success');
+                        characteristicFound = true;
+                        break;
+                    } catch (altCharError) {
+                        this.debugLog(`Alternative characteristic ${altCharUuid} not found`, 'info');
+                    }
+                }
+                
+                if (!characteristicFound) {
+                    throw new Error('No heart rate measurement characteristic found (tried standard and Mi Band specific UUIDs)');
+                }
+            }
             
             // Setup heart rate monitoring BEFORE starting notifications
             this.setupHeartRateMonitoring();
