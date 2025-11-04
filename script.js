@@ -44,21 +44,17 @@ class MiBandHeartRateMonitor {
         this.debugLastUpdate = document.getElementById('debugLastUpdate');
 
         // Picture-in-Picture Elements
-        this.pipWindow = document.getElementById('pipWindow');
-        this.pipHeartRate = document.getElementById('pipHeartRate');
-        this.pipHeartIcon = document.getElementById('pipHeartIcon');
-        this.pipSettings = document.getElementById('pipSettings');
-        this.pipShowIcon = document.getElementById('pipShowIcon');
-        this.pipOpacity = document.getElementById('pipOpacity');
+        this.pipVideo = document.getElementById('pipVideo');
+        this.pipCanvas = document.getElementById('pipCanvas');
+        this.pipContext = this.pipCanvas.getContext('2d');
         
         // PiP state
         this.isPipActive = false;
-        this.pipPosition = { x: 0, y: 0 };
-        this.isDragging = false;
-        this.dragOffset = { x: 0, y: 0 };
+        this.showHeartIcon = true;
+        this.animationFrameId = null;
         
-        // Initialize PiP drag functionality
-        this.initializePipDrag();
+        // Initialize PiP functionality
+        this.initializePip();
     }
 
     updateStatus(message, className = 'disconnected') {
@@ -415,8 +411,10 @@ class MiBandHeartRateMonitor {
         this.updateButtons();
         
         // Close PiP if active
-        if (this.isPipActive) {
-            this.closePictureInPicture();
+        if (this.isPipActive && document.pictureInPictureElement) {
+            document.exitPictureInPicture().catch(error => {
+                console.error('Error exiting PiP:', error);
+            });
         }
         
         console.log('Disconnection handled');
@@ -470,156 +468,153 @@ class MiBandHeartRateMonitor {
         this.updateButtons();
     }
 
-    // Picture-in-Picture functionality
-    initializePipDrag() {
-        if (!this.pipWindow) return;
+    // Picture-in-Picture functionality using standard API
+    initializePip() {
+        if (!this.pipVideo || !this.pipCanvas) return;
 
-        let startX, startY, startLeft, startTop;
+        // Set up canvas size
+        this.pipCanvas.width = 320;
+        this.pipCanvas.height = 240;
 
-        const handleMouseDown = (e) => {
-            if (e.target.classList.contains('pip-close') || 
-                e.target.classList.contains('pip-settings-toggle') ||
-                e.target.type === 'checkbox' ||
-                e.target.type === 'range') {
-                return;
-            }
-            
-            this.isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startLeft = parseInt(window.getComputedStyle(this.pipWindow).left, 10) || 0;
-            startTop = parseInt(window.getComputedStyle(this.pipWindow).top, 10) || 0;
-            
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            
-            this.pipWindow.style.cursor = 'grabbing';
-            e.preventDefault();
-        };
+        // Set up video stream from canvas
+        const stream = this.pipCanvas.captureStream(30); // 30 FPS
+        this.pipVideo.srcObject = stream;
 
-        const handleMouseMove = (e) => {
-            if (!this.isDragging) return;
-            
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            
-            let newLeft = startLeft + dx;
-            let newTop = startTop + dy;
-            
-            // Keep window within viewport bounds
-            const windowRect = this.pipWindow.getBoundingClientRect();
-            const maxLeft = window.innerWidth - windowRect.width;
-            const maxTop = window.innerHeight - windowRect.height;
-            
-            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-            newTop = Math.max(0, Math.min(newTop, maxTop));
-            
-            this.pipWindow.style.left = `${newLeft}px`;
-            this.pipWindow.style.top = `${newTop}px`;
-            this.pipWindow.style.right = 'auto';
-        };
+        // Handle PiP events
+        this.pipVideo.addEventListener('enterpictureinpicture', () => {
+            this.isPipActive = true;
+            this.startPipRendering();
+            this.debugLog('Entered Picture-in-Picture mode', 'success');
+        });
 
-        const handleMouseUp = () => {
-            this.isDragging = false;
-            this.pipWindow.style.cursor = 'move';
-            
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        this.pipWindow.addEventListener('mousedown', handleMouseDown);
+        this.pipVideo.addEventListener('leavepictureinpicture', () => {
+            this.isPipActive = false;
+            this.stopPipRendering();
+            this.debugLog('Left Picture-in-Picture mode', 'info');
+        });
     }
 
-    togglePictureInPicture() {
+    async togglePictureInPicture() {
         if (!this.isConnected) {
             this.showError('Please connect to a device first');
             return;
         }
 
-        if (this.isPipActive) {
-            this.closePictureInPicture();
-        } else {
-            this.openPictureInPicture();
+        try {
+            if (!document.pictureInPictureEnabled) {
+                throw new Error('Picture-in-Picture is not supported by this browser');
+            }
+
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else {
+                // Start playing the video first
+                await this.pipVideo.play();
+                // Request Picture-in-Picture
+                await this.pipVideo.requestPictureInPicture();
+            }
+        } catch (error) {
+            this.debugLog(`PiP error: ${error.message}`, 'error');
+            this.showError(`Picture-in-Picture error: ${error.message}`);
         }
     }
 
-    openPictureInPicture() {
-        if (!this.pipWindow) return;
-
-        this.isPipActive = true;
-        this.pipWindow.classList.remove('hidden');
-        
-        // Update PiP with current heart rate
-        if (this.heartRateElement && this.pipHeartRate) {
-            this.pipHeartRate.textContent = this.heartRateElement.textContent;
+    startPipRendering() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
         }
-        
-        // Apply current settings
-        this.updatePipSettings();
-        
-        this.debugLog('Picture-in-Picture mode activated', 'success');
+
+        const render = () => {
+            if (!this.isPipActive) return;
+
+            this.renderPipFrame();
+            this.animationFrameId = requestAnimationFrame(render);
+        };
+
+        render();
     }
 
-    closePictureInPicture() {
-        if (!this.pipWindow) return;
-
-        this.isPipActive = false;
-        this.pipWindow.classList.add('hidden');
-        
-        // Hide settings panel
-        if (this.pipSettings) {
-            this.pipSettings.classList.remove('show');
+    stopPipRendering() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
         }
-        
-        this.debugLog('Picture-in-Picture mode deactivated', 'info');
     }
 
-    togglePipSettings() {
-        if (!this.pipSettings) return;
+    renderPipFrame() {
+        const ctx = this.pipContext;
+        const canvas = this.pipCanvas;
         
-        this.pipSettings.classList.toggle('show');
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw background gradient
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw status indicator (rounded rectangle)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.beginPath();
+        ctx.roundRect ? ctx.roundRect(15, 15, 120, 24, 12) : ctx.rect(15, 15, 120, 24);
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px Arial';
+        ctx.fillText('Heart Rate Monitor', 25, 32);
+
+        // Get current heart rate
+        const heartRate = this.heartRateElement ? this.heartRateElement.textContent : '--';
+        
+        // Calculate center position
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Draw heart icon if enabled
+        if (this.showHeartIcon) {
+            ctx.font = '48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Animate heart (simple scale effect)
+            const time = Date.now() / 1000;
+            const scale = 1 + 0.1 * Math.sin(time * 2); // 2 beats per second
+            
+            ctx.save();
+            ctx.translate(centerX, centerY - 30);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillText('💖', 0, 0);
+            ctx.restore();
+        }
+
+        // Draw heart rate value
+        ctx.font = 'bold 56px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#ff6b6b';
+        
+        // Add text shadow
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        
+        const yOffset = this.showHeartIcon ? 20 : 0;
+        ctx.fillText(heartRate, centerX, centerY + yOffset);
+
+        // Draw BPM label
+        ctx.shadowColor = 'transparent';
+        ctx.font = '18px Arial';
+        ctx.fillStyle = '#cccccc';
+        ctx.fillText('BPM', centerX, centerY + yOffset + 35);
     }
 
-    updatePipSettings() {
-        if (!this.pipWindow) return;
-
-        // Toggle icon visibility
-        const showIcon = this.pipShowIcon ? this.pipShowIcon.checked : true;
-        if (this.pipHeartIcon) {
-            this.pipHeartIcon.style.display = showIcon ? 'block' : 'none';
-        }
-        
-        // Update container class for minimal mode
-        if (showIcon) {
-            this.pipWindow.classList.remove('pip-minimal');
-        } else {
-            this.pipWindow.classList.add('pip-minimal');
-        }
-        
-        // Update opacity
-        const opacity = this.pipOpacity ? this.pipOpacity.value : 0.85;
-        this.pipWindow.style.background = `rgba(0, 0, 0, ${opacity})`;
-        
-        this.debugLog(`PiP settings updated: Icon=${showIcon}, Opacity=${opacity}`, 'info');
-    }
-
-    // Handle window resize to keep PiP within bounds
-    handleWindowResize() {
-        if (!this.isPipActive || !this.pipWindow) return;
-        
-        const rect = this.pipWindow.getBoundingClientRect();
-        const maxLeft = window.innerWidth - rect.width;
-        const maxTop = window.innerHeight - rect.height;
-        
-        let currentLeft = parseInt(window.getComputedStyle(this.pipWindow).left, 10) || 0;
-        let currentTop = parseInt(window.getComputedStyle(this.pipWindow).top, 10) || 0;
-        
-        if (currentLeft > maxLeft) {
-            this.pipWindow.style.left = `${maxLeft}px`;
-        }
-        if (currentTop > maxTop) {
-            this.pipWindow.style.top = `${maxTop}px`;
-        }
+    togglePipHeartIcon() {
+        this.showHeartIcon = !this.showHeartIcon;
+        this.debugLog(`PiP heart icon: ${this.showHeartIcon ? 'shown' : 'hidden'}`, 'info');
     }
 }
 
@@ -648,16 +643,8 @@ function togglePictureInPicture() {
     monitor.togglePictureInPicture();
 }
 
-function closePictureInPicture() {
-    monitor.closePictureInPicture();
-}
-
-function togglePipSettings() {
-    monitor.togglePipSettings();
-}
-
-function updatePipSettings() {
-    monitor.updatePipSettings();
+function togglePipHeartIcon() {
+    monitor.togglePipHeartIcon();
 }
 
 // Initialize when page loads
@@ -676,7 +663,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
-// Handle window resize for PiP positioning
-window.addEventListener('resize', () => {
-    monitor.handleWindowResize();
+// Keyboard shortcuts for PiP
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'p' && monitor.isConnected) {
+        e.preventDefault();
+        monitor.togglePictureInPicture();
+    }
+    if (e.ctrlKey && e.key === 'h' && monitor.isPipActive) {
+        e.preventDefault();
+        monitor.togglePipHeartIcon();
+    }
 });

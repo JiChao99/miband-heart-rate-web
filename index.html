@@ -246,129 +246,70 @@
             color: #ffd700;
         }
 
-        /* Picture-in-Picture Styles */
-        .pip-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            z-index: 9999;
-            cursor: move;
-            user-select: none;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 107, 107, 0.3);
-            min-width: 120px;
+        /* Picture-in-Picture Video Element */
+        #pipVideo {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 320px;
+            height: 240px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* PiP Canvas Styles */
+        .pip-canvas-container {
+            position: relative;
+            width: 320px;
+            height: 240px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            overflow: hidden;
             font-family: Arial, sans-serif;
         }
 
-        .pip-container.hidden {
-            display: none;
-        }
-
-        .pip-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .pip-title {
-            font-size: 12px;
-            color: #ff6b6b;
-            font-weight: bold;
-        }
-
-        .pip-close {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .pip-close:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .pip-content {
+        .pip-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             text-align: center;
+            color: white;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .pip-heart-icon {
-            font-size: 24px;
+            font-size: 48px;
             color: #ff6b6b;
             animation: heartbeat 1.5s ease-in-out infinite;
-            margin-bottom: 8px;
-        }
-
-        .pip-heart-rate {
-            font-size: 28px;
-            font-weight: bold;
-            color: #ff6b6b;
-            margin-bottom: 2px;
-        }
-
-        .pip-bpm {
-            font-size: 12px;
-            color: #ccc;
-        }
-
-        .pip-settings {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            display: none;
-        }
-
-        .pip-settings.show {
+            margin-bottom: 16px;
             display: block;
         }
 
-        .pip-setting-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 8px 0;
+        .pip-heart-rate {
+            font-size: 56px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 8px;
+        }
+
+        .pip-bpm {
+            font-size: 18px;
+            color: #ccc;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .pip-status {
+            position: absolute;
+            top: 15px;
+            left: 15px;
             font-size: 12px;
-        }
-
-        .pip-checkbox {
-            width: 16px;
-            height: 16px;
-            margin-left: 8px;
-        }
-
-        .pip-settings-toggle {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.5);
             padding: 4px 8px;
             border-radius: 12px;
-            font-size: 10px;
-            cursor: pointer;
-            margin-top: 5px;
-            transition: background 0.2s;
-        }
-
-        .pip-settings-toggle:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .pip-minimal {
-            min-width: 80px;
         }
 
         .pip-minimal .pip-heart-icon {
@@ -376,7 +317,7 @@
         }
 
         .pip-minimal .pip-heart-rate {
-            font-size: 24px;
+            font-size: 48px;
         }
     </style>
 </head>
@@ -391,6 +332,7 @@
                 enable "Heart Rate Broadcast" in your MiBand settings first.</p>
             <p><strong>Supported devices:</strong> MiBand 4-10 (tested on MiBand 10)</p>
             <p><strong>Requirements:</strong> Chrome/Edge browser with HTTPS connection</p>
+            <p><strong>Picture-in-Picture:</strong> Use Ctrl+P to toggle PiP mode, Ctrl+H to toggle heart icon</p>
 
 
         </div>
@@ -443,30 +385,11 @@
         <div id="errorMessage"></div>
     </div>
 
-    <!-- Picture-in-Picture Window -->
-    <div id="pipWindow" class="pip-container hidden">
-        <div class="pip-header">
-            <span class="pip-title">Heart Rate</span>
-            <button class="pip-close" onclick="closePictureInPicture()">×</button>
-        </div>
-        <div class="pip-content">
-            <div class="pip-heart-icon" id="pipHeartIcon">💖</div>
-            <div class="pip-heart-rate" id="pipHeartRate">--</div>
-            <div class="pip-bpm">BPM</div>
-        </div>
-        <button class="pip-settings-toggle" onclick="togglePipSettings()">⚙️</button>
-        <div class="pip-settings" id="pipSettings">
-            <div class="pip-setting-item">
-                <label>Show Icon</label>
-                <input type="checkbox" id="pipShowIcon" class="pip-checkbox" checked onchange="updatePipSettings()">
-            </div>
-            <div class="pip-setting-item">
-                <label>Opacity</label>
-                <input type="range" id="pipOpacity" min="0.5" max="1" step="0.1" value="0.85"
-                    onchange="updatePipSettings()">
-            </div>
-        </div>
-    </div>
+    <!-- Picture-in-Picture Video Element (hidden) -->
+    <video id="pipVideo" muted playsinline autoplay></video>
+    
+    <!-- Canvas for rendering PiP content (hidden) -->
+    <canvas id="pipCanvas" style="position: absolute; top: -9999px; left: -9999px; width: 320px; height: 240px;"></canvas>
 
     <script src="script.js"></script>
 </body>
