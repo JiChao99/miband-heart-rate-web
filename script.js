@@ -202,35 +202,16 @@ class MiBandHeartRateMonitor {
         this.characteristic.addEventListener('characteristicvaluechanged', this.heartRateHandler);
     }
 
-    // Check if running on mobile device
-    isMobileDevice() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
+
 
     async checkWebBluetoothSupport() {
         if (!navigator.bluetooth) {
-            const message = this.isMobileDevice() 
-                ? 'Web Bluetooth is not supported in this browser. Please use Chrome for Android with HTTPS and enable "Experimental Web Platform features" in chrome://flags'
-                : 'Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.';
-            throw new Error(message);
+            throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.');
         }
         
         const available = await navigator.bluetooth.getAvailability();
         if (!available) {
-            const message = this.isMobileDevice()
-                ? 'Bluetooth is not available. Please enable Bluetooth and grant location permissions in Android settings.'
-                : 'Bluetooth is not available on this device.';
-            throw new Error(message);
-        }
-
-        // Additional mobile-specific checks
-        if (this.isMobileDevice()) {
-            this.debugLog('Mobile device detected - applying mobile-specific configurations', 'info');
-            
-            // Check if running in secure context
-            if (!window.isSecureContext) {
-                throw new Error('HTTPS is required for Web Bluetooth on mobile devices. Please access via HTTPS.');
-            }
+            throw new Error('Bluetooth is not available on this device.');
         }
     }
 
@@ -244,36 +225,12 @@ class MiBandHeartRateMonitor {
             // Request device with Heart Rate Service
             this.debugLog('Requesting Bluetooth device with Heart Rate Service...', 'info');
             
-            let requestOptions;
-            if (this.isMobileDevice()) {
-                // Mobile-friendly device request - MUST require heart rate service for access permissions
-                requestOptions = {
-                    filters: [{
-                        services: [HRS_UUID],
-                        namePrefix: 'Xiaomi Smart Band'  // Combine service requirement with name filter
-                    }],
-                    optionalServices: [
-                        'battery_service', 
-                        'device_information',
-                        '0000fee0-0000-1000-8000-00805f9b34fb', // Mi Band Service 1
-                        '0000fee1-0000-1000-8000-00805f9b34fb', // Mi Band Service 2
-                        '00001530-0000-3512-2118-0009af100700'  // Mi Band Custom Service
-                    ]
-                };
-                this.debugLog('Mobile device detected - applying mobile-specific configurations', 'info');
-                this.debugLog('Using combined service+name filter to ensure service access permissions', 'info');
-                this.debugLog(`Mobile filters: ${JSON.stringify(requestOptions.filters)}`, 'info');
-                this.debugLog(`Optional services: ${JSON.stringify(requestOptions.optionalServices)}`, 'info');
-            } else {
-                // Desktop version
-                requestOptions = {
-                    filters: [{
-                        services: [HRS_UUID]
-                    }],
-                    optionalServices: []
-                };
-                this.debugLog('Desktop device detected - using standard filters', 'info');
-            }
+            const requestOptions = {
+                filters: [{
+                    services: [HRS_UUID]
+                }],
+                optionalServices: []
+            };
             
             this.device = await navigator.bluetooth.requestDevice(requestOptions);
 
@@ -303,132 +260,19 @@ class MiBandHeartRateMonitor {
             this.debugLog('Connected to GATT server', 'success');
             this.updateStatus('Discovering services...', 'scanning');
 
-            // First, discover all available services for debugging
-            this.debugLog('Discovering all available services...', 'info');
-            try {
-                const allServices = await this.server.getPrimaryServices();
-                this.debugLog(`Found ${allServices.length} services:`, 'info');
-                for (const service of allServices) {
-                    this.debugLog(`  - Service UUID: ${service.uuid}`, 'info');
-                }
-                
-                // Also try to get common Mi Band services
-                const commonMiBandServices = [
-                    '0000fee0-0000-1000-8000-00805f9b34fb', // Mi Band Service 1
-                    '0000fee1-0000-1000-8000-00805f9b34fb', // Mi Band Service 2
-                    '0000180a-0000-1000-8000-00805f9b34fb', // Device Information Service
-                    '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
-                    '00001530-0000-3512-2118-0009af100700', // Mi Band Custom Service
-                    '00001800-0000-1000-8000-00805f9b34fb', // Generic Access Service
-                    '00001801-0000-1000-8000-00805f9b34fb'  // Generic Attribute Service
-                ];
-                
-                this.debugLog('Testing common Mi Band service UUIDs...', 'info');
-                for (const serviceUuid of commonMiBandServices) {
-                    try {
-                        const testService = await this.server.getPrimaryService(serviceUuid);
-                        this.debugLog(`  ✓ Found service: ${serviceUuid}`, 'success');
-                        
-                        // Get characteristics for this service
-                        try {
-                            const characteristics = await testService.getCharacteristics();
-                            this.debugLog(`    - Has ${characteristics.length} characteristics:`, 'info');
-                            for (const char of characteristics) {
-                                this.debugLog(`      * Characteristic: ${char.uuid}`, 'info');
-                            }
-                        } catch (charError) {
-                            this.debugLog(`    - Could not get characteristics: ${charError.message}`, 'warning');
-                        }
-                    } catch (serviceError) {
-                        this.debugLog(`  ✗ Service not found: ${serviceUuid}`, 'info');
-                    }
-                }
-            } catch (discoveryError) {
-                this.debugLog(`Service discovery error: ${discoveryError.message}`, 'warning');
-            }
+
 
             // Get Heart Rate Service
             this.debugLog('Getting Heart Rate Service...', 'info');
-            try {
-                this.service = await this.server.getPrimaryService(HRS_UUID);
-                this.debugLog('Heart Rate Service obtained', 'success');
-            } catch (hrsError) {
-                this.debugLog(`Standard Heart Rate Service (${HRS_UUID}) not found: ${hrsError.message}`, 'error');
-                
-                // Try alternative Mi Band heart rate service UUIDs
-                const alternativeHRServices = [
-                    '0000fee0-0000-1000-8000-00805f9b34fb',
-                    '0000fee1-0000-1000-8000-00805f9b34fb',
-                    '00001530-0000-3512-2118-0009af100700'
-                ];
-                
-                let serviceFound = false;
-                for (const altServiceUuid of alternativeHRServices) {
-                    try {
-                        this.debugLog(`Trying alternative service: ${altServiceUuid}`, 'info');
-                        this.service = await this.server.getPrimaryService(altServiceUuid);
-                        this.debugLog(`Alternative service found: ${altServiceUuid}`, 'success');
-                        serviceFound = true;
-                        break;
-                    } catch (altError) {
-                        this.debugLog(`Alternative service ${altServiceUuid} not found`, 'info');
-                    }
-                }
-                
-                if (!serviceFound) {
-                    throw new Error('No heart rate service found (tried standard and Mi Band specific UUIDs)');
-                }
-            }
+            this.service = await this.server.getPrimaryService(HRS_UUID);
+            this.debugLog('Heart Rate Service obtained', 'success');
             
             this.updateStatus('Getting characteristics...', 'scanning');
 
-            // Get all characteristics from the service first for debugging
-            this.debugLog('Getting all characteristics from the heart rate service...', 'info');
-            try {
-                const allCharacteristics = await this.service.getCharacteristics();
-                this.debugLog(`Found ${allCharacteristics.length} characteristics in heart rate service:`, 'info');
-                for (const char of allCharacteristics) {
-                    this.debugLog(`  - Characteristic UUID: ${char.uuid}`, 'info');
-                    this.debugLog(`    Properties: ${JSON.stringify(char.properties)}`, 'info');
-                }
-            } catch (charDiscoveryError) {
-                this.debugLog(`Characteristic discovery error: ${charDiscoveryError.message}`, 'warning');
-            }
-
             // Get Heart Rate Measurement Characteristic
             this.debugLog('Getting Heart Rate Measurement characteristic...', 'info');
-            try {
-                this.characteristic = await this.service.getCharacteristic(HRM_UUID);
-                this.debugLog('Heart Rate Measurement characteristic obtained', 'success');
-            } catch (hrmError) {
-                this.debugLog(`Standard Heart Rate Characteristic (${HRM_UUID}) not found: ${hrmError.message}`, 'error');
-                
-                // Try alternative Mi Band heart rate characteristic UUIDs
-                const alternativeHRCharacteristics = [
-                    '00002a37-0000-1000-8000-00805f9b34fb', // Standard HR measurement (full UUID)
-                    '0000ff05-0000-1000-8000-00805f9b34fb', // Mi Band custom characteristic
-                    '0000ff06-0000-1000-8000-00805f9b34fb', // Mi Band custom characteristic
-                    '00000006-0000-3512-2118-0009af100700', // Mi Band specific
-                    '00000007-0000-3512-2118-0009af100700'  // Mi Band specific
-                ];
-                
-                let characteristicFound = false;
-                for (const altCharUuid of alternativeHRCharacteristics) {
-                    try {
-                        this.debugLog(`Trying alternative characteristic: ${altCharUuid}`, 'info');
-                        this.characteristic = await this.service.getCharacteristic(altCharUuid);
-                        this.debugLog(`Alternative characteristic found: ${altCharUuid}`, 'success');
-                        characteristicFound = true;
-                        break;
-                    } catch (altCharError) {
-                        this.debugLog(`Alternative characteristic ${altCharUuid} not found`, 'info');
-                    }
-                }
-                
-                if (!characteristicFound) {
-                    throw new Error('No heart rate measurement characteristic found (tried standard and Mi Band specific UUIDs)');
-                }
-            }
+            this.characteristic = await this.service.getCharacteristic(HRM_UUID);
+            this.debugLog('Heart Rate Measurement characteristic obtained', 'success');
             
             // Setup heart rate monitoring BEFORE starting notifications
             this.setupHeartRateMonitoring();
@@ -447,20 +291,7 @@ class MiBandHeartRateMonitor {
 
         } catch (error) {
             this.debugLog(`Connection error: ${error.message}`, 'error');
-            
-            // Provide mobile-specific error guidance
-            let errorMessage = error.message;
-            if (this.isMobileDevice()) {
-                if (error.message.includes('User cancelled') || error.message.includes('chooser')) {
-                    errorMessage += '\n\nMobile tip: Make sure your MiBand is close to your phone and not connected to other apps.';
-                } else if (error.message.includes('GATT') || error.message.includes('connection')) {
-                    errorMessage += '\n\nMobile tip: Try turning Bluetooth off and on, or restart the MiBand app and try again.';
-                } else if (error.message.includes('not found') || error.message.includes('available')) {
-                    errorMessage += '\n\nMobile tip: Ensure Location services are enabled and Web Bluetooth is supported in chrome://flags.';
-                }
-            }
-            
-            this.showError(errorMessage);
+            this.showError(error.message);
             this.handleDisconnection();
         }
     }
@@ -637,21 +468,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         monitor.debugLog('MiBand Heart Rate Monitor initialized', 'success');
         
-        // Show mobile instructions if on mobile device
-        if (monitor.isMobileDevice()) {
-            const mobileInstructions = document.getElementById('mobileInstructions');
-            if (mobileInstructions) {
-                mobileInstructions.style.display = 'block';
-            }
-            monitor.debugLog('Mobile device detected - showing mobile-specific instructions', 'info');
-        }
-        
         // Check Web Bluetooth support on load
         if (!navigator.bluetooth) {
-            const message = monitor.isMobileDevice() 
-                ? 'Web Bluetooth is not supported in this browser. Please use Chrome for Android with HTTPS and enable "Experimental Web Platform features" in chrome://flags'
-                : 'Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.';
-            monitor.showError(message);
+            monitor.showError('Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.');
             monitor.debugLog('Web Bluetooth not supported in this browser', 'error');
         } else {
             monitor.debugLog('Web Bluetooth API available', 'success');
