@@ -202,14 +202,35 @@ class MiBandHeartRateMonitor {
         this.characteristic.addEventListener('characteristicvaluechanged', this.heartRateHandler);
     }
 
+    // Check if running on mobile device
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     async checkWebBluetoothSupport() {
         if (!navigator.bluetooth) {
-            throw new Error('Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.');
+            const message = this.isMobileDevice() 
+                ? 'Web Bluetooth is not supported in this browser. Please use Chrome for Android with HTTPS and enable "Experimental Web Platform features" in chrome://flags'
+                : 'Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.';
+            throw new Error(message);
         }
         
         const available = await navigator.bluetooth.getAvailability();
         if (!available) {
-            throw new Error('Bluetooth is not available on this device.');
+            const message = this.isMobileDevice()
+                ? 'Bluetooth is not available. Please enable Bluetooth and grant location permissions in Android settings.'
+                : 'Bluetooth is not available on this device.';
+            throw new Error(message);
+        }
+
+        // Additional mobile-specific checks
+        if (this.isMobileDevice()) {
+            this.debugLog('Mobile device detected - applying mobile-specific configurations', 'info');
+            
+            // Check if running in secure context
+            if (!window.isSecureContext) {
+                throw new Error('HTTPS is required for Web Bluetooth on mobile devices. Please access via HTTPS.');
+            }
         }
     }
 
@@ -222,12 +243,31 @@ class MiBandHeartRateMonitor {
 
             // Request device with Heart Rate Service
             this.debugLog('Requesting Bluetooth device with Heart Rate Service...', 'info');
-            this.device = await navigator.bluetooth.requestDevice({
-                filters: [{
-                    services: [HRS_UUID]
-                }],
-                optionalServices: []
-            });
+            
+            let requestOptions;
+            if (this.isMobileDevice()) {
+                // Mobile-friendly device request with broader filters
+                requestOptions = {
+                    filters: [
+                        { services: [HRS_UUID] },
+                        { namePrefix: 'Mi Smart Band' },
+                        { namePrefix: 'Xiaomi Smart Band' },
+                        { namePrefix: 'Mi Band' }
+                    ],
+                    optionalServices: [HRS_UUID, 'battery_service', 'device_information']
+                };
+                this.debugLog('Using mobile-optimized device filters', 'info');
+            } else {
+                // Desktop version
+                requestOptions = {
+                    filters: [{
+                        services: [HRS_UUID]
+                    }],
+                    optionalServices: []
+                };
+            }
+            
+            this.device = await navigator.bluetooth.requestDevice(requestOptions);
 
             this.debugLog(`Device selected: ${this.device.name} (${this.device.id})`, 'success');
             this.updateDeviceInfo(this.device.name, this.device.id);
@@ -285,7 +325,20 @@ class MiBandHeartRateMonitor {
 
         } catch (error) {
             this.debugLog(`Connection error: ${error.message}`, 'error');
-            this.showError(error.message);
+            
+            // Provide mobile-specific error guidance
+            let errorMessage = error.message;
+            if (this.isMobileDevice()) {
+                if (error.message.includes('User cancelled') || error.message.includes('chooser')) {
+                    errorMessage += '\n\nMobile tip: Make sure your MiBand is close to your phone and not connected to other apps.';
+                } else if (error.message.includes('GATT') || error.message.includes('connection')) {
+                    errorMessage += '\n\nMobile tip: Try turning Bluetooth off and on, or restart the MiBand app and try again.';
+                } else if (error.message.includes('not found') || error.message.includes('available')) {
+                    errorMessage += '\n\nMobile tip: Ensure Location services are enabled and Web Bluetooth is supported in chrome://flags.';
+                }
+            }
+            
+            this.showError(errorMessage);
             this.handleDisconnection();
         }
     }
@@ -462,9 +515,21 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         monitor.debugLog('MiBand Heart Rate Monitor initialized', 'success');
         
+        // Show mobile instructions if on mobile device
+        if (monitor.isMobileDevice()) {
+            const mobileInstructions = document.getElementById('mobileInstructions');
+            if (mobileInstructions) {
+                mobileInstructions.style.display = 'block';
+            }
+            monitor.debugLog('Mobile device detected - showing mobile-specific instructions', 'info');
+        }
+        
         // Check Web Bluetooth support on load
         if (!navigator.bluetooth) {
-            monitor.showError('Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.');
+            const message = monitor.isMobileDevice() 
+                ? 'Web Bluetooth is not supported in this browser. Please use Chrome for Android with HTTPS and enable "Experimental Web Platform features" in chrome://flags'
+                : 'Web Bluetooth is not supported in this browser. Please use Chrome or Edge with HTTPS.';
+            monitor.showError(message);
             monitor.debugLog('Web Bluetooth not supported in this browser', 'error');
         } else {
             monitor.debugLog('Web Bluetooth API available', 'success');

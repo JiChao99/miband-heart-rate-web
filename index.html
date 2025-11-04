@@ -213,6 +213,17 @@
             <p>This web application reads heart rate data from MiBand devices using Web Bluetooth API. Make sure to enable "Heart Rate Broadcast" in your MiBand settings first.</p>
             <p><strong>Supported devices:</strong> MiBand 4-10 (tested on MiBand 10)</p>
             <p><strong>Requirements:</strong> Chrome/Edge browser with HTTPS connection</p>
+            
+            <div id="mobileInstructions" style="display: none; background: rgba(255, 193, 7, 0.2); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ffc107;">
+                <h4>📱 Android Chrome Users:</h4>
+                <ol>
+                    <li>Enable "Experimental Web Platform features" in <strong>chrome://flags</strong></li>
+                    <li>Grant Location permission when prompted (required for Bluetooth scanning)</li>
+                    <li>Ensure Bluetooth is enabled in Android settings</li>
+                    <li>Access this page via HTTPS (not HTTP)</li>
+                    <li>Keep your MiBand close to your phone during connection</li>
+                </ol>
+            </div>
         </div>
 
         <div class="heart-rate-display">
