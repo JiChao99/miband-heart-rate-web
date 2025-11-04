@@ -32,6 +32,7 @@ class MiBandHeartRateMonitor {
         this.errorElement = document.getElementById('errorMessage');
         this.connectBtn = document.getElementById('connectBtn');
         this.disconnectBtn = document.getElementById('disconnectBtn');
+        this.pipBtn = document.getElementById('pipBtn');
         
         // Debug UI Elements
         this.debugPanel = document.getElementById('debugPanel');
@@ -41,6 +42,23 @@ class MiBandHeartRateMonitor {
         this.debugServiceStatus = document.getElementById('debugServiceStatus');
         this.debugHeartRateCount = document.getElementById('debugHeartRateCount');
         this.debugLastUpdate = document.getElementById('debugLastUpdate');
+
+        // Picture-in-Picture Elements
+        this.pipWindow = document.getElementById('pipWindow');
+        this.pipHeartRate = document.getElementById('pipHeartRate');
+        this.pipHeartIcon = document.getElementById('pipHeartIcon');
+        this.pipSettings = document.getElementById('pipSettings');
+        this.pipShowIcon = document.getElementById('pipShowIcon');
+        this.pipOpacity = document.getElementById('pipOpacity');
+        
+        // PiP state
+        this.isPipActive = false;
+        this.pipPosition = { x: 0, y: 0 };
+        this.isDragging = false;
+        this.dragOffset = { x: 0, y: 0 };
+        
+        // Initialize PiP drag functionality
+        this.initializePipDrag();
     }
 
     updateStatus(message, className = 'disconnected') {
@@ -158,6 +176,11 @@ class MiBandHeartRateMonitor {
         this.heartRateUpdateCount++;
         this.lastUpdateTime = new Date().toLocaleTimeString();
         
+        // Update PiP display if active
+        if (this.isPipActive && this.pipHeartRate) {
+            this.pipHeartRate.textContent = heartRate;
+        }
+        
         if (sensorContact !== null) {
             this.sensorContactElement.style.display = 'block';
             if (sensorContact) {
@@ -185,6 +208,7 @@ class MiBandHeartRateMonitor {
     updateButtons() {
         this.connectBtn.disabled = this.isConnected;
         this.disconnectBtn.disabled = !this.isConnected;
+        this.pipBtn.disabled = !this.isConnected;
     }
 
     setupHeartRateMonitoring() {
@@ -390,6 +414,11 @@ class MiBandHeartRateMonitor {
         this.deviceInfoElement.style.display = 'none';
         this.updateButtons();
         
+        // Close PiP if active
+        if (this.isPipActive) {
+            this.closePictureInPicture();
+        }
+        
         console.log('Disconnection handled');
     }
 
@@ -440,6 +469,158 @@ class MiBandHeartRateMonitor {
         this.updateStatus('Connected - Monitoring heart rate', 'connected');
         this.updateButtons();
     }
+
+    // Picture-in-Picture functionality
+    initializePipDrag() {
+        if (!this.pipWindow) return;
+
+        let startX, startY, startLeft, startTop;
+
+        const handleMouseDown = (e) => {
+            if (e.target.classList.contains('pip-close') || 
+                e.target.classList.contains('pip-settings-toggle') ||
+                e.target.type === 'checkbox' ||
+                e.target.type === 'range') {
+                return;
+            }
+            
+            this.isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = parseInt(window.getComputedStyle(this.pipWindow).left, 10) || 0;
+            startTop = parseInt(window.getComputedStyle(this.pipWindow).top, 10) || 0;
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
+            this.pipWindow.style.cursor = 'grabbing';
+            e.preventDefault();
+        };
+
+        const handleMouseMove = (e) => {
+            if (!this.isDragging) return;
+            
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+            
+            // Keep window within viewport bounds
+            const windowRect = this.pipWindow.getBoundingClientRect();
+            const maxLeft = window.innerWidth - windowRect.width;
+            const maxTop = window.innerHeight - windowRect.height;
+            
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+            
+            this.pipWindow.style.left = `${newLeft}px`;
+            this.pipWindow.style.top = `${newTop}px`;
+            this.pipWindow.style.right = 'auto';
+        };
+
+        const handleMouseUp = () => {
+            this.isDragging = false;
+            this.pipWindow.style.cursor = 'move';
+            
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        this.pipWindow.addEventListener('mousedown', handleMouseDown);
+    }
+
+    togglePictureInPicture() {
+        if (!this.isConnected) {
+            this.showError('Please connect to a device first');
+            return;
+        }
+
+        if (this.isPipActive) {
+            this.closePictureInPicture();
+        } else {
+            this.openPictureInPicture();
+        }
+    }
+
+    openPictureInPicture() {
+        if (!this.pipWindow) return;
+
+        this.isPipActive = true;
+        this.pipWindow.classList.remove('hidden');
+        
+        // Update PiP with current heart rate
+        if (this.heartRateElement && this.pipHeartRate) {
+            this.pipHeartRate.textContent = this.heartRateElement.textContent;
+        }
+        
+        // Apply current settings
+        this.updatePipSettings();
+        
+        this.debugLog('Picture-in-Picture mode activated', 'success');
+    }
+
+    closePictureInPicture() {
+        if (!this.pipWindow) return;
+
+        this.isPipActive = false;
+        this.pipWindow.classList.add('hidden');
+        
+        // Hide settings panel
+        if (this.pipSettings) {
+            this.pipSettings.classList.remove('show');
+        }
+        
+        this.debugLog('Picture-in-Picture mode deactivated', 'info');
+    }
+
+    togglePipSettings() {
+        if (!this.pipSettings) return;
+        
+        this.pipSettings.classList.toggle('show');
+    }
+
+    updatePipSettings() {
+        if (!this.pipWindow) return;
+
+        // Toggle icon visibility
+        const showIcon = this.pipShowIcon ? this.pipShowIcon.checked : true;
+        if (this.pipHeartIcon) {
+            this.pipHeartIcon.style.display = showIcon ? 'block' : 'none';
+        }
+        
+        // Update container class for minimal mode
+        if (showIcon) {
+            this.pipWindow.classList.remove('pip-minimal');
+        } else {
+            this.pipWindow.classList.add('pip-minimal');
+        }
+        
+        // Update opacity
+        const opacity = this.pipOpacity ? this.pipOpacity.value : 0.85;
+        this.pipWindow.style.background = `rgba(0, 0, 0, ${opacity})`;
+        
+        this.debugLog(`PiP settings updated: Icon=${showIcon}, Opacity=${opacity}`, 'info');
+    }
+
+    // Handle window resize to keep PiP within bounds
+    handleWindowResize() {
+        if (!this.isPipActive || !this.pipWindow) return;
+        
+        const rect = this.pipWindow.getBoundingClientRect();
+        const maxLeft = window.innerWidth - rect.width;
+        const maxTop = window.innerHeight - rect.height;
+        
+        let currentLeft = parseInt(window.getComputedStyle(this.pipWindow).left, 10) || 0;
+        let currentTop = parseInt(window.getComputedStyle(this.pipWindow).top, 10) || 0;
+        
+        if (currentLeft > maxLeft) {
+            this.pipWindow.style.left = `${maxLeft}px`;
+        }
+        if (currentTop > maxTop) {
+            this.pipWindow.style.top = `${maxTop}px`;
+        }
+    }
 }
 
 // Global instance
@@ -462,6 +643,23 @@ function clearDebugLog() {
     monitor.clearDebugLog();
 }
 
+// Picture-in-Picture global functions
+function togglePictureInPicture() {
+    monitor.togglePictureInPicture();
+}
+
+function closePictureInPicture() {
+    monitor.closePictureInPicture();
+}
+
+function togglePipSettings() {
+    monitor.togglePipSettings();
+}
+
+function updatePipSettings() {
+    monitor.updatePipSettings();
+}
+
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', () => {
     // Use setTimeout to ensure all methods are available
@@ -476,4 +674,9 @@ document.addEventListener('DOMContentLoaded', () => {
             monitor.debugLog('Web Bluetooth API available', 'success');
         }
     }, 100);
+});
+
+// Handle window resize for PiP positioning
+window.addEventListener('resize', () => {
+    monitor.handleWindowResize();
 });

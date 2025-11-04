@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
             min-height: 100vh;
             color: white;
         }
+
         .container {
             background: rgba(255, 255, 255, 0.1);
             padding: 30px;
@@ -21,12 +23,14 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
+
         h1 {
             text-align: center;
             margin-bottom: 30px;
             font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
+
         .heart-rate-display {
             text-align: center;
             margin: 30px 0;
@@ -34,41 +38,57 @@
             background: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
         }
+
         .heart-rate-value {
             font-size: 4em;
             font-weight: bold;
             color: #ff6b6b;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
             margin: 10px 0;
         }
+
         .heart-icon {
             font-size: 2em;
             color: #ff6b6b;
             animation: heartbeat 1.5s ease-in-out infinite;
         }
+
         @keyframes heartbeat {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
+
         .status {
             margin: 20px 0;
             padding: 15px;
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.2);
         }
+
         .status.connected {
             background: rgba(76, 175, 80, 0.3);
             border-left: 4px solid #4caf50;
         }
+
         .status.disconnected {
             background: rgba(244, 67, 54, 0.3);
             border-left: 4px solid #f44336;
         }
+
         .status.scanning {
             background: rgba(255, 193, 7, 0.3);
             border-left: 4px solid #ffc107;
         }
+
         button {
             background: linear-gradient(45deg, #ff6b6b, #ee5a52);
             color: white;
@@ -81,18 +101,22 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             margin: 10px;
         }
+
         button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
+
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
+
         .button-container {
             text-align: center;
             margin: 30px 0;
         }
+
         .sensor-contact {
             font-size: 14px;
             margin-top: 10px;
@@ -100,12 +124,15 @@
             border-radius: 15px;
             display: inline-block;
         }
+
         .sensor-contact.detected {
             background: rgba(76, 175, 80, 0.3);
         }
+
         .sensor-contact.not-detected {
             background: rgba(244, 67, 54, 0.3);
         }
+
         .error {
             color: #ffcdd2;
             background: rgba(244, 67, 54, 0.2);
@@ -114,6 +141,7 @@
             margin: 15px 0;
             border-left: 4px solid #f44336;
         }
+
         .info {
             background: rgba(255, 255, 255, 0.1);
             padding: 20px;
@@ -121,6 +149,7 @@
             margin: 20px 0;
             border-left: 4px solid #2196f3;
         }
+
         .device-info {
             margin: 15px 0;
             padding: 10px;
@@ -128,6 +157,7 @@
             border-radius: 8px;
             font-size: 14px;
         }
+
         .debug-panel {
             margin: 20px 0;
             padding: 15px;
@@ -135,16 +165,19 @@
             border-radius: 10px;
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
+
         .debug-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
+
         .debug-header h3 {
             margin: 0;
             color: #ffd700;
         }
+
         .debug-clear {
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -154,6 +187,7 @@
             border-radius: 15px;
             cursor: pointer;
         }
+
         .debug-stats {
             background: rgba(255, 255, 255, 0.1);
             padding: 10px;
@@ -162,19 +196,23 @@
             font-size: 14px;
             font-family: monospace;
         }
+
         .debug-stats div {
             margin: 5px 0;
         }
+
         .debug-log {
             background: rgba(0, 0, 0, 0.4);
             border-radius: 8px;
             padding: 10px;
         }
+
         .debug-log h4 {
             margin: 0 0 10px 0;
             color: #ffd700;
             font-size: 14px;
         }
+
         .debug-log-content {
             max-height: 200px;
             overflow-y: auto;
@@ -186,44 +224,175 @@
             padding: 10px;
             border-radius: 5px;
         }
+
         .debug-entry {
             margin: 2px 0;
             padding: 2px 0;
         }
+
         .debug-entry.info {
             color: #87ceeb;
         }
+
         .debug-entry.error {
             color: #ff6b6b;
         }
+
         .debug-entry.success {
             color: #90ee90;
         }
+
         .debug-entry.warning {
             color: #ffd700;
         }
+
+        /* Picture-in-Picture Styles */
+        .pip-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 9999;
+            cursor: move;
+            user-select: none;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 107, 107, 0.3);
+            min-width: 120px;
+            font-family: Arial, sans-serif;
+        }
+
+        .pip-container.hidden {
+            display: none;
+        }
+
+        .pip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .pip-title {
+            font-size: 12px;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .pip-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .pip-close:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .pip-content {
+            text-align: center;
+        }
+
+        .pip-heart-icon {
+            font-size: 24px;
+            color: #ff6b6b;
+            animation: heartbeat 1.5s ease-in-out infinite;
+            margin-bottom: 8px;
+        }
+
+        .pip-heart-rate {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 2px;
+        }
+
+        .pip-bpm {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .pip-settings {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        .pip-settings.show {
+            display: block;
+        }
+
+        .pip-setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .pip-checkbox {
+            width: 16px;
+            height: 16px;
+            margin-left: 8px;
+        }
+
+        .pip-settings-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: background 0.2s;
+        }
+
+        .pip-settings-toggle:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .pip-minimal {
+            min-width: 80px;
+        }
+
+        .pip-minimal .pip-heart-icon {
+            display: none;
+        }
+
+        .pip-minimal .pip-heart-rate {
+            font-size: 24px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🏃‍♂️ MiBand Heart Rate Monitor</h1>
-        
+
         <div class="info">
             <h3>📱 Web-Based MiBand Heart Rate Reader</h3>
-            <p>This web application reads heart rate data from MiBand devices using Web Bluetooth API. Make sure to enable "Heart Rate Broadcast" in your MiBand settings first.</p>
+            <p>This web application reads heart rate data from MiBand devices using Web Bluetooth API. Make sure to
+                enable "Heart Rate Broadcast" in your MiBand settings first.</p>
             <p><strong>Supported devices:</strong> MiBand 4-10 (tested on MiBand 10)</p>
             <p><strong>Requirements:</strong> Chrome/Edge browser with HTTPS connection</p>
-            
-            <div id="mobileInstructions" style="display: none; background: rgba(255, 193, 7, 0.2); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ffc107;">
-                <h4>📱 Android Chrome Users:</h4>
-                <ol>
-                    <li>Enable "Experimental Web Platform features" in <strong>chrome://flags</strong></li>
-                    <li>Grant Location permission when prompted (required for Bluetooth scanning)</li>
-                    <li>Ensure Bluetooth is enabled in Android settings</li>
-                    <li>Access this page via HTTPS (not HTTP)</li>
-                    <li>Keep your MiBand close to your phone during connection</li>
-                </ol>
-            </div>
+
+
         </div>
 
         <div class="heart-rate-display">
@@ -247,6 +416,7 @@
         <div class="button-container">
             <button id="connectBtn" onclick="connectToDevice()">🔗 Connect to MiBand</button>
             <button id="disconnectBtn" onclick="disconnectDevice()" disabled>🔌 Disconnect</button>
+            <button id="pipBtn" onclick="togglePictureInPicture()" disabled>📺 Picture-in-Picture</button>
             <button id="debugToggle" onclick="toggleDebugMode()">🔧 Debug Mode</button>
         </div>
 
@@ -273,6 +443,32 @@
         <div id="errorMessage"></div>
     </div>
 
+    <!-- Picture-in-Picture Window -->
+    <div id="pipWindow" class="pip-container hidden">
+        <div class="pip-header">
+            <span class="pip-title">Heart Rate</span>
+            <button class="pip-close" onclick="closePictureInPicture()">×</button>
+        </div>
+        <div class="pip-content">
+            <div class="pip-heart-icon" id="pipHeartIcon">💖</div>
+            <div class="pip-heart-rate" id="pipHeartRate">--</div>
+            <div class="pip-bpm">BPM</div>
+        </div>
+        <button class="pip-settings-toggle" onclick="togglePipSettings()">⚙️</button>
+        <div class="pip-settings" id="pipSettings">
+            <div class="pip-setting-item">
+                <label>Show Icon</label>
+                <input type="checkbox" id="pipShowIcon" class="pip-checkbox" checked onchange="updatePipSettings()">
+            </div>
+            <div class="pip-setting-item">
+                <label>Opacity</label>
+                <input type="range" id="pipOpacity" min="0.5" max="1" step="0.1" value="0.85"
+                    onchange="updatePipSettings()">
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
+
 </html>
