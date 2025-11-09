@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MiBand Heart Rate Monitor</title>
+    <title>🏃‍♂️ 小米手环心率监控</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -261,70 +261,60 @@
 
 <body>
     <div class="container">
-        <h1>🏃‍♂️ MiBand Heart Rate Monitor</h1>
-
-        <div class="info">
-            <h3>📱 Web-Based MiBand Heart Rate Reader</h3>
-            <p>This web application reads heart rate data from MiBand devices using Web Bluetooth API. Make sure to
-                enable "Heart Rate Broadcast" in your MiBand settings first.</p>
-            <p><strong>Supported devices:</strong> MiBand 4-10 (tested on MiBand 10)</p>
-            <p><strong>Requirements:</strong> Chrome/Edge browser with HTTPS connection</p>
-            <p><strong>Picture-in-Picture:</strong> Use Ctrl+P to toggle PiP mode, Ctrl+H to toggle heart icon</p>
-
-
-        </div>
+        <h1>🏃‍♂️ 小米手环心率监控</h1>
 
         <div class="heart-rate-display">
             <div class="heart-icon">💖</div>
             <div class="heart-rate-value" id="heartRateValue">--</div>
-            <div>BPM</div>
+            <div>次/分</div>
             <div class="sensor-contact" id="sensorContact" style="display: none;">
-                Sensor Contact: Unknown
+                传感器接触: 未知
             </div>
         </div>
 
         <div class="status disconnected" id="status">
-            <strong>Status:</strong> Not connected
+            <strong>状态:</strong> 未连接
         </div>
 
         <div class="device-info" id="deviceInfo" style="display: none;">
-            <strong>Device:</strong> <span id="deviceName">Unknown</span><br>
-            <strong>Device ID:</strong> <span id="deviceId">Unknown</span>
+            <strong>设备:</strong> <span id="deviceName">未知</span><br>
+            <strong>设备ID:</strong> <span id="deviceId">未知</span>
         </div>
 
         <div class="button-container">
-            <button id="connectBtn" onclick="connectToDevice()">🔗 Connect to MiBand</button>
-            <button id="disconnectBtn" onclick="disconnectDevice()" disabled>🔌 Disconnect</button>
-            <button id="pipBtn" onclick="togglePictureInPicture()" disabled>📺 Picture-in-Picture</button>
-            <button id="debugToggle" onclick="toggleDebugMode()">🔧 Debug Mode</button>
+            <button id="connectBtn" onclick="connectToDevice()">🔗 连接小米手环</button>
+            <button id="disconnectBtn" onclick="disconnectDevice()" disabled>🔌 断开连接</button>
+            <button id="pipBtn" onclick="togglePictureInPicture()" disabled>📺 画中画模式</button>
+            <button id="debugToggle" onclick="toggleDebugMode()">🔧 调试模式</button>
+            <button id="languageToggle" onclick="toggleLanguage()">🌐 English</button>
         </div>
 
         <!-- PiP Settings Panel -->
         <div class="info" id="pipSettingsPanel" style="display: none;">
-            <h3>📺 Picture-in-Picture Settings</h3>
+            <h3>📺 画中画设置</h3>
             <div style="margin: 15px 0;">
                 <label style="display: flex; align-items: center; cursor: pointer;">
                     <input type="checkbox" id="pipShowIconSetting" checked onchange="updatePipIconSetting()" style="margin-right: 10px; transform: scale(1.2);">
-                    <span>Show heart icon in PiP window</span>
+                    <span>在画中画窗口中显示心形图标</span>
                 </label>
             </div>
         </div>
 
         <div class="debug-panel" id="debugPanel" style="display: none;">
             <div class="debug-header">
-                <h3>🔧 Debug Information</h3>
-                <button class="debug-clear" onclick="clearDebugLog()">Clear Log</button>
+                <h3>🔧 调试信息</h3>
+                <button class="debug-clear" onclick="clearDebugLog()">清除日志</button>
             </div>
             <div class="debug-content">
                 <div class="debug-stats" id="debugStats">
-                    <div><strong>Connection Status:</strong> <span id="debugConnectionStatus">Disconnected</span></div>
-                    <div><strong>Device Name:</strong> <span id="debugDeviceName">None</span></div>
-                    <div><strong>Service Status:</strong> <span id="debugServiceStatus">Not connected</span></div>
-                    <div><strong>Heart Rate Updates:</strong> <span id="debugHeartRateCount">0</span></div>
-                    <div><strong>Last Update:</strong> <span id="debugLastUpdate">Never</span></div>
+                    <div><strong>连接状态:</strong> <span id="debugConnectionStatus">已断开</span></div>
+                    <div><strong>设备名称:</strong> <span id="debugDeviceName">无</span></div>
+                    <div><strong>服务状态:</strong> <span id="debugServiceStatus">未连接</span></div>
+                    <div><strong>心率更新次数:</strong> <span id="debugHeartRateCount">0</span></div>
+                    <div><strong>最后更新:</strong> <span id="debugLastUpdate">从未</span></div>
                 </div>
                 <div class="debug-log">
-                    <h4>Debug Log:</h4>
+                    <h4>调试日志:</h4>
                     <div class="debug-log-content" id="debugLogContent"></div>
                 </div>
             </div>

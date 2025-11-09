@@ -6,6 +6,8 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 
 **🚀 Live Demo:** [https://jichao99.github.io/miband-heart-rate-web/](https://jichao99.github.io/miband-heart-rate-web/)
 
+**📖 中文版本:** [README.zh.md](./README.zh.md)
+
 ## ✨ Features
 
 - 🔗 **Direct Browser Connection** - No app installation needed
@@ -15,6 +17,8 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 - 🔄 **Auto-reconnect** - Handles connection drops gracefully
 - 📱 **Mobile Friendly** - Works on mobile browsers too
 - 🔧 **Debug Mode** - Advanced debugging with connection logs and statistics
+- 🌐 **Bilingual Support** - Chinese and English interface with auto-detection
+- 📺 **Picture-in-Picture** - PiP mode for heart rate display
 
 ## 🚀 Quick Start
 
@@ -55,27 +59,33 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 
 ### Local Development Server
 
-For local development, you need HTTPS. Use one of these methods:
+For local development, you can use HTTP for basic testing, but HTTPS is required for Picture-in-Picture functionality. Use one of these methods:
 
 ```bash
 # Using Python 3
-python -m http.server 8000 --bind localhost
+python -m http.server 8080 --bind localhost
 
 # Using Node.js (http-server)
-npx http-server -p 8000 -a localhost
+npx http-server -p 8080 -a localhost
 
 # Using PHP
-php -S localhost:8000
+php -S localhost:8080
+
+# Using the included Node.js server
+node server.js
 ```
 
-Then access via `https://localhost:8000` (you may need to accept the self-signed certificate).
+Then access via `http://localhost:8080` (for HTTPS setup, see PiP requirements below).
 
 ### File Structure
 ```
 miband-heart-rate-web/
 ├── index.html          # Main HTML interface
-├── script.js           # Web Bluetooth implementation
-└── README.md          # Documentation
+├── script.js           # Web Bluetooth implementation & internationalization
+├── server.js           # Local development server
+├── README.md           # English documentation (this file)
+├── README.zh.md        # Chinese documentation
+└── ...
 ```
 
 ## 🔌 Web Bluetooth Implementation
@@ -87,7 +97,47 @@ This implementation replicates the Rust version's functionality using Web Blueto
 - **Data parsing**: Same bit-field parsing as original Rust code
 - **Auto-reconnect**: Handles connection drops like the original's loop
 
-## 🆚 Comparison with Original
+## � Internationalization
+
+The application supports bilingual Chinese/English interface:
+
+- 🔍 **Auto-detection**: Automatically selects language based on browser settings
+- 🔄 **Manual toggle**: Click the 🌐 button to switch between languages
+- 💾 **Persistent preference**: Language choice is saved to local storage
+- 🎯 **Complete translation**: All UI text, error messages, and debug info are bilingual
+
+## 📺 Picture-in-Picture Support
+
+Picture-in-Picture mode for heart rate display:
+
+- 🖼️ **Real-time display**: Shows live heart rate in a small window
+- 🎨 **Beautiful interface**: Gradient background with clear typography
+- 💖 **Optional icon**: Toggle heart icon display in PiP window
+- ⌨️ **Keyboard shortcuts**: Ctrl+P to toggle PiP mode
+- 🔒 **HTTPS required**: PiP API requires secure context
+
+### HTTPS Setup for PiP
+
+Picture-in-Picture requires HTTPS. For local development:
+
+1. **Browser flags** (easiest):
+   - Chrome: Enable `chrome://flags/#allow-insecure-localhost`
+   - Edge: Enable `edge://flags/#allow-insecure-localhost`
+
+2. **Use included server with flags**:
+   ```bash
+   node server.js
+   # Then use browser flags above
+   ```
+
+3. **Deploy to GitHub Pages** (automatic HTTPS)
+
+4. **Use ngrok for tunneling**:
+   ```bash
+   npx ngrok http 8080
+   ```
+
+## �🆚 Comparison with Original
 
 | Feature | Rust Version | Web Version |
 |---------|-------------|-------------|
@@ -98,12 +148,14 @@ This implementation replicates the Rust version's functionality using Web Blueto
 | Heart Rate Display | Text only | Animated with BPM |
 | Sensor Contact | Text output | Visual indicators |
 | Reconnection | Automatic loop | Auto-reconnect logic |
+| Language Support | Single language | Bilingual (Chinese/English) |
+| Picture-in-Picture | None | Supported |
 
 ## 🐛 Troubleshooting
 
 ### "Web Bluetooth not supported"
 - Use Chrome or Edge browser
-- Ensure you're on HTTPS (not HTTP)
+- Ensure you're on HTTPS (not HTTP) for production
 
 ### "Bluetooth not available"
 - Enable Bluetooth on your device
@@ -114,10 +166,33 @@ This implementation replicates the Rust version's functionality using Web Blueto
 - Ensure MiBand is not connected to another app
 - Try restarting Bluetooth on your device
 
+### "Picture-in-Picture not working"
+- Ensure you're using HTTPS protocol
+- Enable browser flags for localhost (see HTTPS Setup above)
+- Chrome: Enable `chrome://flags/#allow-insecure-localhost`
+- Edge: Enable `edge://flags/#allow-insecure-localhost`
+
 ### Connection drops frequently
 - Keep MiBand close to your device
 - Ensure MiBand has sufficient battery
 - Close other Bluetooth apps that might interfere
+
+## 💡 Usage Tips
+
+### Keyboard Shortcuts
+- `Ctrl + P`: Toggle Picture-in-Picture mode
+- `Ctrl + H`: Toggle heart icon in PiP window (when PiP is active)
+
+### Debug Mode
+Enable debug mode to:
+- View detailed connection logs
+- Monitor heart rate update statistics  
+- Test Picture-in-Picture functionality without device connection
+
+### Language Switching
+- Click the 🌐 button to switch between Chinese and English
+- Language preference is automatically saved
+- First visit automatically detects browser language
 
 ## 📄 License
 
