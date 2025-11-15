@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏃‍♂️ 小米手环心率监控</title>
+    <!-- Fonts for themes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent:#ff6b6b;
+            --fg:#ffffff;
+            --bg-gradient:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body[data-theme="ecg"] { --accent:#28ff7e; --fg:#d9fef1; background:#0a1014; }
+        body[data-theme="cyber"] { --accent:#06d9ff; --fg:#c9faff; background:radial-gradient(circle at 30% 30%, #04151b, #02070b 70%); }
+        body[data-theme="glass"] { --accent:#2563eb; --fg:#1e2a36; background:linear-gradient(135deg,#dfe9f3,#f5f9fc); color:var(--fg); }
+        body[data-theme="sport"] { --accent:#ff9500; --fg:#ffffff; background:#0f1115; }
+    body[data-theme="pixel"] { --accent:#ff2d55; --fg:#f4f4d7; background:#1b1f23; font-family:'Press Start 2P', cursive; }
+    body[data-theme="darkglass"] { --accent:#5fb3ff; --fg:#e6eef5; background:linear-gradient(140deg,#0d1117,#131a23 70%); }
+    body[data-theme="vaporwave"] { --accent:#ff77ff; --fg:#ffffff; background:linear-gradient(135deg,#ff9a9e 0%,#8e54e9 50%,#2c82c9 100%); }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--fg);
+            transition: background .4s ease, color .3s ease;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .heart-rate-display {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .heart-rate-value {
+            font-size: 4em;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin: 10px 0;
+        }
+
+        .heart-icon {
+            font-size: 2em;
+            color: #ff6b6b;
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+
+        @keyframes heartbeat {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .status.connected {
+            background: rgba(76, 175, 80, 0.3);
+            border-left: 4px solid #4caf50;
+        }
+
+        .status.disconnected {
+            background: rgba(244, 67, 54, 0.3);
+            border-left: 4px solid #f44336;
+        }
+
+        .status.scanning {
+            background: rgba(255, 193, 7, 0.3);
+            border-left: 4px solid #ffc107;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 10px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .sensor-contact {
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .sensor-contact.detected {
+            background: rgba(76, 175, 80, 0.3);
+        }
+
+        .sensor-contact.not-detected {
+            background: rgba(244, 67, 54, 0.3);
+        }
+
+        .error {
+            color: #ffcdd2;
+            background: rgba(244, 67, 54, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #f44336;
+        }
+
+        .info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+
+        .device-info {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .debug-panel {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .debug-header h3 {
+            margin: 0;
+            color: #ffd700;
+        }
+
+        .debug-clear {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 12px;
+            border-radius: 15px;
+            cursor: pointer;
+        }
+
+        .debug-stats {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .debug-stats div {
+            margin: 5px 0;
+        }
+
+        .debug-log {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .debug-log h4 {
+            margin: 0 0 10px 0;
+            color: #ffd700;
+            font-size: 14px;
+        }
+
+        .debug-log-content {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .debug-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+
+        .debug-entry.info {
+            color: #87ceeb;
+        }
+
+        .debug-entry.error {
+            color: #ff6b6b;
+        }
+
+        .debug-entry.success {
+            color: #90ee90;
+        }
+
+        .debug-entry.warning {
+            color: #ffd700;
+        }
+
+        /* Theme switcher */
+        .theme-switcher { display:flex; flex-wrap:wrap; justify-content:center; gap:.5rem; margin-top:10px; }
+        .theme-switcher button { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); padding:.5rem .9rem; font-size:.7rem; border-radius:8px; cursor:pointer; color:var(--fg); backdrop-filter:blur(6px); transition:.25s; }
+        .theme-switcher button:hover { box-shadow:0 0 0 1px var(--accent),0 0 8px var(--accent); transform:translateY(-2px); }
+        .theme-switcher button.active { box-shadow:0 0 0 1px var(--accent),0 0 14px var(--accent); }
+
+        /* Picture-in-Picture Video Element */
+        #pipVideo {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 160px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+    </style>
+</head>
+<body data-theme="ecg">
+    <div class="container">
+        <h1>🏃‍♂️ 小米手环心率监控</h1>
+
+        <div class="heart-rate-display">
+            <div class="heart-icon">💖</div>
+            <div class="heart-rate-value" id="heartRateValue">--</div>
+            <div id="bpmUnit" data-i18n="bpm">BPM</div>
+            <div class="sensor-contact" id="sensorContact" style="display: none;">
+                传感器接触: 未知
+            </div>
+        </div>
+
+        <div class="status disconnected" id="status">
+            <strong>状态:</strong> 未连接
+        </div>
+
+        <div class="device-info" id="deviceInfo" style="display: none;">
+            <strong>设备:</strong> <span id="deviceName">未知</span><br>
+            <strong>设备ID:</strong> <span id="deviceId">未知</span>
+        </div>
+
+        <div class="button-container">
+            <button id="connectBtn" onclick="connectToDevice()">🔗 连接小米手环</button>
+            <button id="disconnectBtn" onclick="disconnectDevice()" disabled>🔌 断开连接</button>
+            <button id="pipBtn" onclick="togglePictureInPicture()" disabled>📺 画中画模式</button>
+            <button id="debugToggle" onclick="toggleDebugMode()">🔧 调试模式</button>
+            <button id="languageToggle" onclick="toggleLanguage()">🌐 English</button>
+            <div class="theme-switcher" id="themeSwitcher">
+                <button data-theme="ecg">ECG</button>
+                <button data-theme="cyber">Cyber</button>
+                <button data-theme="glass">Glass</button>
+                <button data-theme="sport">Sport</button>
+                <button data-theme="pixel">Pixel</button>
+                <button data-theme="darkglass">DarkGlass</button>
+                <button data-theme="vaporwave">Vaporwave</button>
+            </div>
+        </div>
+
+        <!-- PiP Settings Panel -->
+        <div class="info" id="pipSettingsPanel" style="display: none;">
+            <h3>📺 画中画设置</h3>
+            <div style="margin: 15px 0;">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="pipShowIconSetting" checked onchange="updatePipIconSetting()" style="margin-right: 10px; transform: scale(1.2);">
+                    <span>在画中画窗口中显示心形图标</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="debug-panel" id="debugPanel" style="display: none;">
+            <div class="debug-header">
+                <h3>🔧 调试信息</h3>
+                <button class="debug-clear" onclick="clearDebugLog()">清除日志</button>
+            </div>
+            <div class="debug-content">
+                <div class="debug-stats" id="debugStats">
+                    <div><strong>连接状态:</strong> <span id="debugConnectionStatus">已断开</span></div>
+                    <div><strong>设备名称:</strong> <span id="debugDeviceName">无</span></div>
+                    <div><strong>服务状态:</strong> <span id="debugServiceStatus">未连接</span></div>
+                    <div><strong>心率更新次数:</strong> <span id="debugHeartRateCount">0</span></div>
+                    <div><strong>最后更新:</strong> <span id="debugLastUpdate">从未</span></div>
+                </div>
+                <div class="debug-log">
+                    <h4>调试日志:</h4>
+                    <div class="debug-log-content" id="debugLogContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMessage"></div>
+    </div>
+
+    <!-- Picture-in-Picture Video Element -->
+    <video id="pipVideo" muted playsinline autoplay style="
+        position: fixed;
+        top: -9999px;
+        left: -9999px;
+        width: 200px;
+        height: 150px;
+    "></video>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
