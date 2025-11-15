@@ -7,7 +7,7 @@ const translations = {
     zh: {
         title: "🏃‍♂️ 小米手环心率监控",
         heartRateMonitor: "小米手环心率监控",
-        bpm: "次/分",
+    bpm: "次/分",
         statusPrefix: "状态",
         statusNotConnected: "未连接",
         statusScanning: "扫描设备中...",
@@ -104,7 +104,14 @@ const translations = {
         infoHeartRate: "心率",
         infoDebugLogCleared: "调试日志已清除",
         languageToggle: "🌐 English",
-        unknown: "未知"
+        unknown: "未知",
+        themeECG: "ECG心电图",
+        themeCyber: "赛博",
+        themeGlass: "玻璃拟态",
+        themeSport: "运动环",
+        themePixel: "像素复古"
+    ,themeDarkGlass: "暗黑玻璃"
+    ,themeVaporwave: "蒸汽波"
     },
     en: {
         title: "🏃‍♂️ MiBand Heart Rate Monitor",
@@ -206,7 +213,14 @@ const translations = {
         infoHeartRate: "Heart Rate",
         infoDebugLogCleared: "Debug log cleared",
         languageToggle: "🌐 中文",
-        unknown: "Unknown"
+        unknown: "Unknown",
+        themeECG: "ECG",
+        themeCyber: "Cyber",
+        themeGlass: "Glass",
+        themeSport: "Sport Ring",
+        themePixel: "Pixel Retro"
+    ,themeDarkGlass: "Dark Glass"
+    ,themeVaporwave: "Vaporwave"
     }
 };
 
@@ -260,13 +274,9 @@ class LanguageManager {
             mainHeading.textContent = this.t('heartRateMonitor');
         }
 
-        // Update BPM text
-        const bpmElements = document.querySelectorAll('.heart-rate-display div:last-child');
-        bpmElements.forEach(el => {
-            if (el.textContent.includes('BPM') || el.textContent.includes('次/分')) {
-                el.textContent = this.t('bpm');
-            }
-        });
+        // Update BPM text (explicit element for reliability)
+        const bpmUnitEl = document.getElementById('bpmUnit');
+        if (bpmUnitEl) bpmUnitEl.textContent = this.t('bpm');
 
         // Update buttons
         this.updateButtonTexts();
@@ -282,6 +292,8 @@ class LanguageManager {
         if (langToggle) {
             langToggle.textContent = this.t('languageToggle');
         }
+        // Update theme buttons
+        this.updateThemeButtons();
     }
 
     updateButtonTexts() {
@@ -358,10 +370,58 @@ class LanguageManager {
             monitor.updateUITexts();
         }
     }
+
+    updateThemeButtons(){
+        const container = document.getElementById('themeSwitcher');
+        if(!container) return;
+        const map = {
+            ecg: 'themeECG',
+            cyber: 'themeCyber',
+            glass: 'themeGlass',
+            sport: 'themeSport',
+            pixel: 'themePixel',
+            darkglass: 'themeDarkGlass',
+            vaporwave: 'themeVaporwave'
+        };
+        container.querySelectorAll('button[data-theme]').forEach(btn => {
+            const key = map[btn.dataset.theme];
+            if(key) btn.textContent = this.t(key);
+        });
+    }
 }
 
 // Global language manager instance
 const languageManager = new LanguageManager();
+
+// Theme Manager for multi-style rendering
+class ThemeManager {
+    constructor() {
+    this.supported = ['ecg','cyber','glass','sport','pixel','darkglass','vaporwave'];
+        this.current = this.loadTheme();
+        this.applyTheme(this.current);
+    }
+    loadTheme() {
+        const saved = localStorage.getItem('miband-theme');
+        if (saved && this.supported.includes(saved)) return saved;
+        return 'ecg';
+    }
+    applyTheme(theme) {
+        if (!this.supported.includes(theme)) return;
+        this.current = theme;
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('miband-theme', theme);
+        this.updateActiveButton();
+    }
+    updateActiveButton() {
+        const container = document.getElementById('themeSwitcher');
+        if (!container) return;
+        container.querySelectorAll('button').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === this.current);
+        });
+    }
+}
+
+const themeManager = new ThemeManager();
 
 class MiBandHeartRateMonitor {
     constructor() {
@@ -417,6 +477,9 @@ class MiBandHeartRateMonitor {
         this.pipStream = null;
         this.pipScale = window.devicePixelRatio || 1;
         this.pipDimensions = { width: 320, height: 240 };
+    // Heart rate history for waveform / analytics
+    this.heartRateHistory = [];
+    this.maxHistory = 240; // approx 240 samples (adjust as needed)
 
         // PiP Settings UI Elements
         this.pipSettingsPanel = document.getElementById('pipSettingsPanel');
@@ -733,32 +796,155 @@ class MiBandHeartRateMonitor {
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
+    const theme = themeManager.current;
+    const smallScale = width/320; // adapt drawing for small PiP sizes
+        const hr = this.heartRateElement?.textContent?.trim() || '--';
+        const numericHR = parseInt(hr,10);
 
-        const gradient = ctx.createLinearGradient(0, 0, width, height);
-        gradient.addColorStop(0, '#4c6ef5');
-        gradient.addColorStop(1, '#7b2cbf');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
+        // Background per theme
+        if (theme === 'ecg') {
+            ctx.fillStyle = '#0a1014';
+            ctx.fillRect(0,0,width,height);
+            // grid
+            ctx.strokeStyle = '#18232c';
+            ctx.lineWidth = 1 * smallScale;
+            ctx.globalAlpha = 0.25;
+            const step = 20 * smallScale;
+            for(let x=0;x<width;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,height);ctx.stroke();}
+            for(let y=0;y<height;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(width,y);ctx.stroke();}
+            ctx.globalAlpha = 1;
+        } else if (theme === 'cyber') {
+            const g = ctx.createLinearGradient(0,0,width,height);
+            g.addColorStop(0,'#04151b'); g.addColorStop(1,'#061e29');
+            ctx.fillStyle = g; ctx.fillRect(0,0,width,height);
+            // subtle scan lines
+            ctx.globalAlpha = .18; ctx.fillStyle = '#06d9ff33';
+            const spacing = Math.max(2, Math.round(3 * smallScale));
+            for(let y=0;y<height;y+=spacing){ctx.fillRect(0,y,width,1);} ctx.globalAlpha=1;
+            // glow border
+            ctx.strokeStyle = '#06d9ff55'; ctx.lineWidth = 3 * smallScale; ctx.strokeRect(1,1,width-2,height-2);
+        } else if (theme === 'glass') {
+            const g = ctx.createLinearGradient(0,0,width,height);
+            g.addColorStop(0,'#e8eef3'); g.addColorStop(1,'#f5f9fc');
+            ctx.fillStyle = g; ctx.fillRect(0,0,width,height);
+        } else if (theme === 'darkglass') {
+            const g = ctx.createLinearGradient(0,0,width,height);
+            g.addColorStop(0,'#0d1117'); g.addColorStop(1,'#17202a');
+            ctx.fillStyle = g; ctx.fillRect(0,0,width,height);
+            // frosted panel
+            ctx.fillStyle = '#ffffff10';
+            const panelW = width*0.75, panelH = height*0.55;
+            // roundRect polyfill fallback
+            if (typeof ctx.roundRect !== 'function') {
+                const rx = 12*smallScale;
+                const x = (width-panelW)/2, y = (height-panelH)/2;
+                const w = panelW, h = panelH;
+                ctx.beginPath();
+                ctx.moveTo(x+rx,y);
+                ctx.lineTo(x+w-rx,y);
+                ctx.quadraticCurveTo(x+w,y,x+w,y+rx);
+                ctx.lineTo(x+w,y+h-rx);
+                ctx.quadraticCurveTo(x+w,y+h,x+w-rx,y+h);
+                ctx.lineTo(x+rx,y+h);
+                ctx.quadraticCurveTo(x,y+h,x,y+h-rx);
+                ctx.lineTo(x,y+rx);
+                ctx.quadraticCurveTo(x,y,x+rx,y);
+                ctx.closePath();
+            } else {
+                ctx.roundRect((width-panelW)/2,(height-panelH)/2,panelW,panelH,12*smallScale);
+            }
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff22'; ctx.lineWidth = 2*smallScale; ctx.stroke();
+        } else if (theme === 'sport') {
+            ctx.fillStyle = '#0f1115'; ctx.fillRect(0,0,width,height);
+        } else if (theme === 'pixel') {
+            ctx.fillStyle = '#1b1f23'; ctx.fillRect(0,0,width,height);
+        } else if (theme === 'vaporwave') {
+            const g = ctx.createLinearGradient(0,0,width,height);
+            g.addColorStop(0,'#ff9a9e'); g.addColorStop(.4,'#fad0c4'); g.addColorStop(.75,'#8e54e9'); g.addColorStop(1,'#2c82c9');
+            ctx.fillStyle = g; ctx.fillRect(0,0,width,height);
+            // pastel grid
+            ctx.globalAlpha=.22; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1*smallScale;
+            const gridStep=24*smallScale;
+            for(let x=0;x<width;x+=gridStep){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,height);ctx.stroke();}
+            for(let y=0;y<height;y+=gridStep){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(width,y);ctx.stroke();}
+            ctx.globalAlpha=1;
+        } else { // fallback
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#4c6ef5');
+            gradient.addColorStop(1, '#7b2cbf');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+        }
 
-        const heartRate = this.heartRateElement?.textContent?.trim() || '--';
-        const rateY = this.showHeartIcon ? height / 2 + 10 : height / 2;
+        const accent = getComputedStyle(document.body).getPropertyValue('--accent') || '#ff6b6b';
+        const fg = getComputedStyle(document.body).getPropertyValue('--fg') || '#ffffff';
 
-        ctx.shadowColor = 'rgba(0,0,0,0.35)';
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '600 72px "Segoe UI", Arial, sans-serif';
-        ctx.fillText(heartRate, width / 2, rateY);
+        // Waveform for ecg & cyber
+        if(['ecg','cyber','vaporwave'].includes(theme) && this.heartRateHistory.length > 1){
+            const minHR = 40, maxHR = 200;
+            ctx.lineWidth = (theme==='cyber'?2.2:2) * smallScale + (smallScale<1?0.5:0);
+            ctx.strokeStyle = accent.trim();
+            ctx.beginPath();
+            const len = this.heartRateHistory.length;
+            for(let i=0;i<len;i++){
+                const v = this.heartRateHistory[i];
+                const norm = (v - minHR)/(maxHR - minHR);
+                const x = i * (width/(this.maxHistory-1));
+                const y = height - norm*height;
+                if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+            }
+            ctx.stroke();
+            // glow
+            ctx.shadowColor = accent.trim();
+            ctx.shadowBlur = 12;
+        }
 
+        // Sport ring
+        if(theme==='sport' && !isNaN(numericHR)){
+            const pct = Math.min(numericHR/200,1);
+            const radius = Math.min(width,height)/2 - 20;
+            const cx = width/2, cy = height/2 - 10;
+            ctx.lineWidth = 18;
+            ctx.strokeStyle = '#333';
+            ctx.beginPath(); ctx.arc(cx,cy,radius,0,Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = accent.trim();
+            ctx.beginPath(); ctx.arc(cx,cy,radius,-Math.PI/2, -Math.PI/2 + pct*Math.PI*2); ctx.stroke();
+        }
+
+        // Heart rate number
+    let baseSize = 72 * smallScale;
+    if(theme==='pixel') baseSize = 54 * smallScale;
+    if(theme==='ecg') baseSize = 64 * smallScale;
+    if(theme==='sport') baseSize = 60 * smallScale;
+    if(theme==='vaporwave') baseSize = 66 * smallScale;
+    if(theme==='darkglass') baseSize = 68 * smallScale;
+    const fontMain = (theme==='pixel'? 'bold ' + Math.round(baseSize) + 'px "Press Start 2P", monospace'
+              : (theme==='ecg'? '600 ' + Math.round(baseSize) + 'px JetBrains Mono, monospace'
+              : '600 ' + Math.round(baseSize) + 'px "Segoe UI", Arial, sans-serif'));
+        const rateY = height/2 + (theme==='sport'?0:10);
+        ctx.shadowColor = theme==='glass'? 'rgba(0,0,0,0.15)': 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = theme==='pixel'?0:20;
+        ctx.fillStyle = fg.trim();
+        ctx.font = fontMain;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(hr, width/2, rateY);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.font = '500 24px "Segoe UI", Arial, sans-serif';
-        ctx.fillText(languageManager.t('bpm'), width / 2, rateY + 38);
+        ctx.fillStyle = theme==='glass'? '#1e2a36' : 'rgba(255,255,255,0.85)';
+    const subSize = theme==='pixel'? 16*smallScale : 24*smallScale;
+    ctx.font = theme==='pixel'? 'bold ' + Math.round(subSize) + 'px "Press Start 2P", monospace' : '500 ' + Math.round(subSize) + 'px JetBrains Mono, Arial, sans-serif';
+    ctx.fillText(languageManager.t('bpm'), width/2, rateY + (theme==='pixel'? (34*smallScale) : (38*smallScale)));
     }
 
     updateHeartRate(heartRate, sensorContact = null) {
         this.heartRateElement.textContent = heartRate;
         this.heartRateUpdateCount++;
         this.lastUpdateTime = new Date().toLocaleTimeString();
+        const n = parseInt(heartRate,10);
+        if(!isNaN(n)) {
+            this.heartRateHistory.push(n);
+            if(this.heartRateHistory.length > this.maxHistory) this.heartRateHistory.shift();
+        }
 
         if (sensorContact !== null) {
             this.sensorContactElement.style.display = 'block';
@@ -1211,6 +1397,18 @@ function testPictureInPicture() {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize language system first
     languageManager.updateUI();
+    // Theme switcher binding
+    const ts = document.getElementById('themeSwitcher');
+    if(ts){
+        ts.addEventListener('click', e=>{
+            const btn = e.target.closest('button[data-theme]');
+            if(!btn) return;
+            themeManager.applyTheme(btn.dataset.theme);
+            // Redraw PiP frame if active
+            if(monitor.pipContext) monitor.drawPipFrame();
+        });
+        themeManager.updateActiveButton();
+    }
     
     // Use setTimeout to ensure all methods are available
     setTimeout(() => {
@@ -1252,5 +1450,11 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'h' && monitor.isPipActive) {
         e.preventDefault();
         monitor.togglePipHeartIcon();
+    }
+    // Theme quick shortcuts Ctrl+1..5
+    if(e.ctrlKey && ['1','2','3','4','5'].includes(e.key)){
+        const idxMap = { '1':'ecg','2':'cyber','3':'glass','4':'sport','5':'pixel' };
+        themeManager.applyTheme(idxMap[e.key]);
+        if(monitor.pipContext) monitor.drawPipFrame();
     }
 });

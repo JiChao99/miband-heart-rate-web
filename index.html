@@ -5,15 +5,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🏃‍♂️ 小米手环心率监控</title>
+    <!-- Fonts for themes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --accent:#ff6b6b;
+            --fg:#ffffff;
+            --bg-gradient:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body[data-theme="ecg"] { --accent:#28ff7e; --fg:#d9fef1; background:#0a1014; }
+        body[data-theme="cyber"] { --accent:#06d9ff; --fg:#c9faff; background:radial-gradient(circle at 30% 30%, #04151b, #02070b 70%); }
+        body[data-theme="glass"] { --accent:#2563eb; --fg:#1e2a36; background:linear-gradient(135deg,#dfe9f3,#f5f9fc); color:var(--fg); }
+        body[data-theme="sport"] { --accent:#ff9500; --fg:#ffffff; background:#0f1115; }
+    body[data-theme="pixel"] { --accent:#ff2d55; --fg:#f4f4d7; background:#1b1f23; font-family:'Press Start 2P', cursive; }
+    body[data-theme="darkglass"] { --accent:#5fb3ff; --fg:#e6eef5; background:linear-gradient(140deg,#0d1117,#131a23 70%); }
+    body[data-theme="vaporwave"] { --accent:#ff77ff; --fg:#ffffff; background:linear-gradient(135deg,#ff9a9e 0%,#8e54e9 50%,#2c82c9 100%); }
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-gradient);
             min-height: 100vh;
-            color: white;
+            color: var(--fg);
+            transition: background .4s ease, color .3s ease;
         }
 
         .container {
@@ -246,6 +262,12 @@
             color: #ffd700;
         }
 
+        /* Theme switcher */
+        .theme-switcher { display:flex; flex-wrap:wrap; justify-content:center; gap:.5rem; margin-top:10px; }
+        .theme-switcher button { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); padding:.5rem .9rem; font-size:.7rem; border-radius:8px; cursor:pointer; color:var(--fg); backdrop-filter:blur(6px); transition:.25s; }
+        .theme-switcher button:hover { box-shadow:0 0 0 1px var(--accent),0 0 8px var(--accent); transform:translateY(-2px); }
+        .theme-switcher button.active { box-shadow:0 0 0 1px var(--accent),0 0 14px var(--accent); }
+
         /* Picture-in-Picture Video Element */
         #pipVideo {
             position: absolute;
@@ -258,15 +280,14 @@
 
     </style>
 </head>
-
-<body>
+<body data-theme="ecg">
     <div class="container">
         <h1>🏃‍♂️ 小米手环心率监控</h1>
 
         <div class="heart-rate-display">
             <div class="heart-icon">💖</div>
             <div class="heart-rate-value" id="heartRateValue">--</div>
-            <div>次/分</div>
+            <div id="bpmUnit" data-i18n="bpm">BPM</div>
             <div class="sensor-contact" id="sensorContact" style="display: none;">
                 传感器接触: 未知
             </div>
@@ -287,6 +308,15 @@
             <button id="pipBtn" onclick="togglePictureInPicture()" disabled>📺 画中画模式</button>
             <button id="debugToggle" onclick="toggleDebugMode()">🔧 调试模式</button>
             <button id="languageToggle" onclick="toggleLanguage()">🌐 English</button>
+            <div class="theme-switcher" id="themeSwitcher">
+                <button data-theme="ecg">ECG</button>
+                <button data-theme="cyber">Cyber</button>
+                <button data-theme="glass">Glass</button>
+                <button data-theme="sport">Sport</button>
+                <button data-theme="pixel">Pixel</button>
+                <button data-theme="darkglass">DarkGlass</button>
+                <button data-theme="vaporwave">Vaporwave</button>
+            </div>
         </div>
 
         <!-- PiP Settings Panel -->

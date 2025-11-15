@@ -19,6 +19,7 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 - 🔧 **Debug Mode** - Advanced debugging with connection logs and statistics
 - 🌐 **Bilingual Support** - Chinese and English interface with auto-detection
 - 📺 **Picture-in-Picture** - PiP mode for heart rate display
+- 🎨 **Multi Themes** - ECG grid, Cyber neon, Glass, Sport ring, Pixel retro, Dark Glass, Vaporwave (switchable & bilingual labels)
 
 ## 🚀 Quick Start
 
@@ -89,6 +90,24 @@ miband-heart-rate-web/
 ```
 
 ## 🔌 Web Bluetooth Implementation
+## 🎨 Theme Styles
+
+You can switch visual styles in the UI (buttons under the language toggle):
+
+| Theme | Description | PiP Rendering |
+|-------|-------------|---------------|
+| ECG 心电图 | Dark medical monitor with green waveform & grid | Real-time line waveform + BPM |
+| Cyber 赛博 | Neon gradient + scanlines | Glowing waveform + BPM |
+| Glass 玻璃拟态 | Light frosted minimal | Large clean number + BPM label |
+| Sport 运动环 | Dark background + progress ring | Animated ring showing HR percentage of 200 BPM |
+| Pixel 像素复古 | Retro pixel font | Pixel-style number + BPM |
+| Dark Glass 暗黑玻璃 | Dark frosted glass panel over deep gradient | High-contrast number inside translucent panel |
+| Vaporwave 蒸汽波 | Pastel pink/purple/teal gradient + grid | Waveform + neon number |
+
+Keyboard shortcuts (Ctrl+1..7) also switch themes quickly when the page is focused.
+
+Picture-in-Picture adapts to the selected theme, drawing waveform or ring accordingly. Heart rate history (~last 240 samples) is used for wave rendering.
+
 
 This implementation replicates the Rust version's functionality using Web Bluetooth API:
 
