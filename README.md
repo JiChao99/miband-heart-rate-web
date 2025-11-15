@@ -8,6 +8,27 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 
 **📖 中文版本:** [README.zh.md](./README.zh.md)
 
+## 🖼 Demo Screenshots
+
+Large previews (full images):
+
+![Main Interface](source/homePage.jpg)
+
+![Picture-in-Picture Window](source/pip.png)
+
+Theme preview thumbnails
+
+| Theme | Screenshot | Description |
+|-------|------------|-------------|
+| ECG | ![ECG Theme](source/ECG_demo.jpg) | Medical dark monitor with green waveform & grid |
+| Cyber | ![Cyber Theme](source/Cyber_demo.jpg) | Neon gradient with scanlines & glowing waveform |
+| Glass | ![Glass Theme](source/Glass_demo.jpg) | Light frosted minimal panel |
+| Sport Ring | ![Sport Ring Theme](source/SportRing_demo.jpg) | Animated percentage ring around BPM |
+| Pixel Retro | ![Pixel Retro Theme](source/PixelRetro_demo.jpg) | Retro pixel font styling |
+| Dark Glass | ![Dark Glass Theme](source/DarkGlass_demo.jpg) | Dark frosted glass panel over gradient |
+| Vaporwave | ![Vaporwave Theme](source/Vaporwave_demo.jpg) | Pastel pink/purple/teal gradient with waveform |
+
+
 ## ✨ Features
 
 - 🔗 **Direct Browser Connection** - No app installation needed
@@ -51,6 +72,7 @@ A web-based application for reading real-time heart rate data from Xiaomi Smart 
 ## 📱 Supported Devices
 
 **Tested on:**
+- MiBand 9 Pro ✅
 - MiBand 10/NFC ✅
 
 **Should work with:**
@@ -106,27 +128,7 @@ You can switch visual styles in the UI (buttons under the language toggle):
 
 Keyboard shortcuts (Ctrl+1..7) also switch themes quickly when the page is focused.
 
-Picture-in-Picture adapts to the selected theme, drawing waveform or ring accordingly. Heart rate history (~last 240 samples) is used for wave rendering.
-
-## 🖼 Demo Screenshots
-
-Large previews (full images):
-
-![Main Interface](source/homePage.jpg)
-
-![Picture-in-Picture Window](source/pip.png)
-
-Theme preview thumbnails
-
-| Theme | Screenshot | Description |
-|-------|------------|-------------|
-| ECG | ![ECG Theme](source/ECG_demo.jpg) | Medical dark monitor with green waveform & grid |
-| Cyber | ![Cyber Theme](source/Cyber_demo.jpg) | Neon gradient with scanlines & glowing waveform |
-| Glass | ![Glass Theme](source/Glass_demo.jpg) | Light frosted minimal panel |
-| Sport Ring | ![Sport Ring Theme](source/SportRing_demo.jpg) | Animated percentage ring around BPM |
-| Pixel Retro | ![Pixel Retro Theme](source/PixelRetro_demo.jpg) | Retro pixel font styling |
-| Dark Glass | ![Dark Glass Theme](source/DarkGlass_demo.jpg) | Dark frosted glass panel over gradient |
-| Vaporwave | ![Vaporwave Theme](source/Vaporwave_demo.jpg) | Pastel pink/purple/teal gradient with waveform |
+Picture-in-Picture adapts to the selected theme, drawing waveform or ring accordingly. Heart rate history (~last 240 samples) is used for wav rendering.
 
 > Tip: Use keyboard shortcuts Ctrl+1..7 to switch themes quickly while focused on the page.
 

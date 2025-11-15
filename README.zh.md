@@ -8,6 +8,26 @@
 
 **📖 English Version:** [README.md](./README.md)
 
+## 🖼 演示截图
+
+大图预览：
+
+![主界面](source/homePage.jpg)
+
+![画中画窗口](source/pip.png)
+
+主题缩略图（均为 426×139 尺寸）：
+
+| 主题 | 截图 | 描述 |
+|------|------|------|
+| ECG 心电图 | ![ECG](source/ECG_demo.jpg) | 深色医疗监视器 + 绿色波形和网格 |
+| 赛博 Cyber | ![Cyber](source/Cyber_demo.jpg) | 霓虹渐变背景 + 扫描线与发光波形 |
+| 玻璃拟态 Glass | ![Glass](source/Glass_demo.jpg) | 浅色磨砂面板 + 居中数字 |
+| 运动环 Sport Ring | ![Sport Ring](source/SportRing_demo.jpg) | 根据心率百分比显示动画圆环 |
+| 像素复古 Pixel Retro | ![Pixel Retro](source/PixelRetro_demo.jpg) | 像素风格字体复古深色背景 |
+| 暗黑玻璃 Dark Glass | ![Dark Glass](source/DarkGlass_demo.jpg) | 深色渐变 + 半透明磨砂面板 |
+| 蒸汽波 Vaporwave | ![Vaporwave](source/Vaporwave_demo.jpg) | 粉紫蓝渐变 + 波形显示 |
+
 ## ✨ 特性
 
 - 🔗 **浏览器直连** - 无需安装应用程序
@@ -51,6 +71,7 @@
 ## 📱 支持的设备
 
 **已测试设备:**
+- 小米手环 9 Pro ✅
 - 小米手环 10/NFC ✅
 
 **应该支持的设备:**
@@ -108,26 +129,6 @@ miband-heart-rate-web/
 | Vaporwave 蒸汽波 | 粉紫蓝渐变 + 浅白网格 | 波形 + 霓虹数字 |
 
 快捷键: Ctrl+1..7 可快速切换主题；PiP 小窗里会自适应绘制波形或圆环。心率历史（约最近 240 个样本）用于波形渲染。
-
-## 🖼 演示截图
-
-大图预览：
-
-![主界面](source/homePage.jpg)
-
-![画中画窗口](source/pip.png)
-
-主题缩略图（均为 426×139 尺寸）：
-
-| 主题 | 截图 | 描述 |
-|------|------|------|
-| ECG 心电图 | ![ECG](source/ECG_demo.jpg) | 深色医疗监视器 + 绿色波形和网格 |
-| 赛博 Cyber | ![Cyber](source/Cyber_demo.jpg) | 霓虹渐变背景 + 扫描线与发光波形 |
-| 玻璃拟态 Glass | ![Glass](source/Glass_demo.jpg) | 浅色磨砂面板 + 居中数字 |
-| 运动环 Sport Ring | ![Sport Ring](source/SportRing_demo.jpg) | 根据心率百分比显示动画圆环 |
-| 像素复古 Pixel Retro | ![Pixel Retro](source/PixelRetro_demo.jpg) | 像素风格字体复古深色背景 |
-| 暗黑玻璃 Dark Glass | ![Dark Glass](source/DarkGlass_demo.jpg) | 深色渐变 + 半透明磨砂面板 |
-| 蒸汽波 Vaporwave | ![Vaporwave](source/Vaporwave_demo.jpg) | 粉紫蓝渐变 + 波形显示 |
 
 > 提示: 聚焦页面时可使用 Ctrl+1..7 快速切换主题。
 
