@@ -96,17 +96,39 @@ You can switch visual styles in the UI (buttons under the language toggle):
 
 | Theme | Description | PiP Rendering |
 |-------|-------------|---------------|
-| ECG 心电图 | Dark medical monitor with green waveform & grid | Real-time line waveform + BPM |
-| Cyber 赛博 | Neon gradient + scanlines | Glowing waveform + BPM |
-| Glass 玻璃拟态 | Light frosted minimal | Large clean number + BPM label |
-| Sport 运动环 | Dark background + progress ring | Animated ring showing HR percentage of 200 BPM |
-| Pixel 像素复古 | Retro pixel font | Pixel-style number + BPM |
-| Dark Glass 暗黑玻璃 | Dark frosted glass panel over deep gradient | High-contrast number inside translucent panel |
-| Vaporwave 蒸汽波 | Pastel pink/purple/teal gradient + grid | Waveform + neon number |
+| ECG | Dark medical monitor with green waveform & grid | Real-time line waveform + BPM |
+| Cyber | Neon gradient + scanlines | Glowing waveform + BPM |
+| Glass | Light frosted minimal | Large clean number + BPM label |
+| Sport | Dark background + progress ring | Animated ring showing HR percentage of 200 BPM |
+| Pixel | Retro pixel font | Pixel-style number + BPM |
+| Dark Glass | Dark frosted glass panel over deep gradient | High-contrast number inside translucent panel |
+| Vaporwave | Pastel pink/purple/teal gradient + grid | Waveform + neon number |
 
 Keyboard shortcuts (Ctrl+1..7) also switch themes quickly when the page is focused.
 
 Picture-in-Picture adapts to the selected theme, drawing waveform or ring accordingly. Heart rate history (~last 240 samples) is used for wave rendering.
+
+## 🖼 Demo Screenshots
+
+Large previews (full images):
+
+![Main Interface](source/homePage.jpg)
+
+![Picture-in-Picture Window](source/pip.png)
+
+Theme preview thumbnails
+
+| Theme | Screenshot | Description |
+|-------|------------|-------------|
+| ECG | ![ECG Theme](source/ECG_demo.jpg) | Medical dark monitor with green waveform & grid |
+| Cyber | ![Cyber Theme](source/Cyber_demo.jpg) | Neon gradient with scanlines & glowing waveform |
+| Glass | ![Glass Theme](source/Glass_demo.jpg) | Light frosted minimal panel |
+| Sport Ring | ![Sport Ring Theme](source/SportRing_demo.jpg) | Animated percentage ring around BPM |
+| Pixel Retro | ![Pixel Retro Theme](source/PixelRetro_demo.jpg) | Retro pixel font styling |
+| Dark Glass | ![Dark Glass Theme](source/DarkGlass_demo.jpg) | Dark frosted glass panel over gradient |
+| Vaporwave | ![Vaporwave Theme](source/Vaporwave_demo.jpg) | Pastel pink/purple/teal gradient with waveform |
+
+> Tip: Use keyboard shortcuts Ctrl+1..7 to switch themes quickly while focused on the page.
 
 
 This implementation replicates the Rust version's functionality using Web Bluetooth API:
